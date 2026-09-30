@@ -1,0 +1,10 @@
+Order ID,Region,Quantity,Amount
+N-100,North,3,42.50
+N-100,North,3,42.50
+N-200,South,1,19.00
+N-200,East,1,19.00
+N-300,West,0,11.00
+N-400,Unknown,1,5.00
+N-500,Central,1,8.00
+N-600,East,1,500.00
+N-700,South,2,27.25

@@ -1,0 +1,43 @@
+---
+import '../styles/global.css';
+const base = import.meta.env.BASE_URL;
+---
+
+<!doctype html>
+<html lang="en">
+  <head
+    ><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><title>
+      Field Relay case study
+    </title></head
+  ><body
+    ><main>
+      <p class="eyebrow">FIELD RELAY / CASE STUDY</p><h1>
+        Making messy order exports reviewable.
+      </h1><p class="lede">
+        A fictional operations desk receives partner CSVs that use different headers and sometimes
+        repeat, conflict, or corrupt an order. The question is whether a person can see what will
+        happen before a destination is touched.
+      </p><h2>Decision design</h2><p>
+        An adapter maps each partner’s headers. Validation keeps the physical source row and raw
+        cells. A partner plus order ID is the business key: exact duplicates are suppressed, while
+        every conflicting or invalid variant is held. Region rules select a destination; Central and
+        high-value orders wait for a local approval.
+      </p><h2>Replay experiment</h2><p>
+        Choose Northstar, validate, inject an outage, then deliver. Turn the outage off and retry. A
+        stable key and fingerprint produce one simulated delivery; replay produces a visible skip.
+        Change a delivered payload and it is held rather than inherited as a retry.
+      </p><h2>Failure found in testing</h2><p>
+        Early versions treated a capped event list as the delivery registry. After enough events, an
+        old successful order could be forgotten. The workbench now keeps a memory-only session
+        registry separate from its 500-event display.
+      </p><h2>Operational boundary</h2><p>
+        This demo has no vendors, accounts, storage, network uploads, authentication, or real
+        delivery. It is a local, inspectable simulation.
+      </p><p>
+        <a href={base}>Open the simulation</a> · <a
+          href="https://github.com/mastodonsharkgirl/field-relay">Inspect the source</a
+        >
+      </p>
+    </main></body
+  >
+</html>

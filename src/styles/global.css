@@ -1,0 +1,265 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #e7f1e9;
+  background: #0b1110;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: radial-gradient(circle at 85% 0, #18372f 0, transparent 30rem), #0b1110;
+}
+main {
+  max-width: 1180px;
+  margin: auto;
+  padding: 42px 24px;
+}
+header,
+.section-title,
+.delivery {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+}
+.eyebrow {
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: #9ce6c5;
+  margin: 0 0 9px;
+}
+h1 {
+  font:
+    clamp(3.8rem, 7vw, 5rem)/0.9 Georgia,
+    serif;
+  letter-spacing: -0.08em;
+  margin: 0;
+  color: #f4f1e9;
+}
+h1 i {
+  color: #c87d4a;
+}
+h2 {
+  font:
+    1.1rem/1.2 Georgia,
+    serif;
+  margin: 0;
+  color: #f6f2e8;
+}
+.lede {
+  max-width: 38rem;
+  color: #a6b5ac;
+  line-height: 1.6;
+}
+.rail {
+  display: flex;
+  gap: 22px;
+  border-block: 1px solid #293b35;
+  margin: 38px 0 18px;
+  padding: 12px 0;
+  color: #9ce6c5;
+  font-size: 0.75rem;
+  overflow: auto;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.panel {
+  border: 1px solid #294139;
+  background: #101917;
+  padding: 21px;
+  box-shadow: 0 18px 45px #0003;
+}
+.section-title small {
+  color: #91a099;
+}
+.chips,
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+button {
+  font: inherit;
+  font-size: 0.77rem;
+  background: #9ce6c5;
+  border: 1px solid #9ce6c5;
+  color: #0b1110;
+  padding: 10px 13px;
+  cursor: pointer;
+}
+button:hover,
+.chips .active {
+  background: #c87d4a;
+  border-color: #c87d4a;
+}
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+.ghost {
+  background: transparent;
+  color: #d5e4db;
+  border-color: #53655d;
+}
+label {
+  display: block;
+  font-size: 0.75rem;
+  color: #b8c8bf;
+  margin-bottom: 8px;
+}
+textarea {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: #090e0d;
+  color: #d9e7df;
+  border: 1px solid #3b5148;
+  width: 100%;
+  min-height: 220px;
+  padding: 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.mapping {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.mapping input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 8px;
+  color: #d9e7df;
+  background: #090e0d;
+  border: 1px solid #3b5148;
+}
+header nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+}
+a {
+  color: #9ce6c5;
+}
+code {
+  color: #d1efdf;
+  font-size: 0.75rem;
+}
+.error,
+.held {
+  color: #f4ae7c;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid #2a4037;
+  padding: 15px 0;
+  margin: 17px 0;
+}
+.stats b {
+  font:
+    1.8rem Georgia,
+    serif;
+  color: #e8f4ec;
+}
+.stats small {
+  display: block;
+  font: 0.7rem ui-monospace;
+  color: #99aaa1;
+  margin-top: 5px;
+}
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 290px;
+  overflow: auto;
+}
+li {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 6px;
+  border-bottom: 1px solid #23362f;
+  padding: 11px 0;
+  font-size: 0.78rem;
+}
+li small {
+  grid-column: 2;
+  color: #a8b9af;
+}
+.delivery {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+}
+.delivery ol {
+  grid-column: 1/-1;
+  width: 100%;
+  margin-top: 15px;
+}
+.delivery li {
+  grid-template-columns: 200px 170px 1fr;
+}
+.failed {
+  color: #f4ae7c;
+}
+.delivered {
+  color: #9ce6c5;
+}
+.skipped {
+  color: #9eaaa4;
+}
+.toggle {
+  margin: 0;
+  white-space: nowrap;
+}
+.empty {
+  display: block;
+  color: #91a099;
+}
+footer {
+  margin-top: 30px;
+  color: #74847b;
+  font-size: 0.72rem;
+}
+@media (max-width: 700px) {
+  main {
+    padding: 25px 16px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .delivery {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .delivery li {
+    grid-template-columns: 1fr;
+  }
+  .delivery li small {
+    grid-column: 1;
+  }
+  header {
+    flex-direction: column;
+  }
+  h1 {
+    font-size: 4rem;
+  }
+  .rail {
+    gap: 14px;
+  }
+  .toggle {
+    white-space: normal;
+  }
+}
