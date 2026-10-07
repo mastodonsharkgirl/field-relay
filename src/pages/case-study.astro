@@ -5,39 +5,77 @@ const base = import.meta.env.BASE_URL;
 
 <!doctype html>
 <html lang="en">
-  <head
-    ><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><title>
-      Field Relay case study
-    </title></head
-  ><body
-    ><main>
-      <p class="eyebrow">FIELD RELAY / CASE STUDY</p><h1>
-        Making messy order exports reviewable.
-      </h1><p class="lede">
-        A fictional operations desk receives partner CSVs that use different headers and sometimes
-        repeat, conflict, or corrupt an order. The question is whether a person can see what will
-        happen before a destination is touched.
-      </p><h2>Decision design</h2><p>
-        An adapter maps each partner’s headers. Validation keeps the physical source row and raw
-        cells. A partner plus order ID is the business key: exact duplicates are suppressed, while
-        every conflicting or invalid variant is held. Region rules select a destination; Central and
-        high-value orders wait for a local approval.
-      </p><h2>Replay experiment</h2><p>
-        Choose Northstar, validate, inject an outage, then deliver. Turn the outage off and retry. A
-        stable key and fingerprint produce one simulated delivery; replay produces a visible skip.
-        Change a delivered payload and it is held rather than inherited as a retry.
-      </p><h2>Failure found in testing</h2><p>
-        Early versions treated a capped event list as the delivery registry. After enough events, an
-        old successful order could be forgotten. The workbench now keeps a memory-only session
-        registry separate from its 500-event display.
-      </p><h2>Operational boundary</h2><p>
-        This demo has no vendors, accounts, storage, network uploads, authentication, or real
-        delivery. It is a local, inspectable simulation.
-      </p><p>
-        <a href={base}>Open the simulation</a> · <a
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Field Relay — reconciliation case study</title>
+    <style>
+      .case-study {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: clamp(32px, 8vw, 96px) 24px;
+      }
+      .case-study h1 {
+        margin-bottom: 20px;
+      }
+      .case-study h2 {
+        margin-top: 42px;
+      }
+      .case-study p {
+        max-width: 670px;
+        color: #46564e;
+        line-height: 1.7;
+      }
+      .case-study .lede {
+        font-size: 1.05rem;
+      }
+      .case-study a {
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="case-study">
+      <p class="eyebrow">FIELD RELAY / CASE STUDY</p>
+      <h1>A review desk for the difference between two exports.</h1>
+      <p class="lede">
+        Field Relay is a browser-local reconciliation desk for comparing a baseline export with a
+        candidate export before someone acts. It keeps exact input, original source rows, field
+        mapping, and local review decisions in an explicit download.
+      </p>
+      <h2>Comparison design</h2>
+      <p>
+        Each export has its own explicit business-ID map and selected comparable fields. IDs remain
+        literal strings, so leading zeroes are preserved. One-to-one records can be unchanged or
+        changed; records only on one side stay visible. Duplicate or blank IDs stay ambiguous with
+        all row evidence and never receive an automatic replacement decision.
+      </p>
+      <h2>Reviewable evidence</h2>
+      <p>
+        A reviewer can record an explicit hold, a proposal to use Candidate as current, or an
+        expected difference, with a reason. These decisions bind to the exact local input and
+        mapping revision. Editing either export, a map, a compared field, or whitespace
+        normalization clears them. The report includes full input text once in a shared comparison
+        reference, then maps review decisions to that reference with mappings, findings, and
+        unresolved items. Diagnostic fingerprints are labels only.
+      </p>
+      <h2>Separate delivery lab</h2>
+      <p>
+        The earlier fictional delivery exercise remains separate from reconciliation. It
+        demonstrates parsing, approval, outage retry, and a replay-safe ledger, but it does not
+        consume comparison results or update any downstream system.
+      </p>
+      <h2>Operational boundary</h2>
+      <p>
+        The reconciliation desk reads pasted or browser-selected files only in the active tab and
+        never sends them to a server. Exports are explicit downloads. The included examples and
+        delivery lab are fictional; the comparison workflow works with a user’s own CSV exports.
+      </p>
+      <p>
+        <a href={base}>Open the reconciliation desk</a> · <a
           href="https://github.com/mastodonsharkgirl/field-relay">Inspect the source</a
         >
       </p>
-    </main></body
-  >
+    </main>
+  </body>
 </html>

@@ -106,6 +106,8 @@ const read = (text: string): Row[] => {
   return out;
 };
 export const parseCsv = (text: string) => read(text).map((x) => x.cells);
+export const parseCsvRows = (text: string) =>
+  read(text).map(({ cells, raw, row }) => ({ cells: [...cells], raw, row }));
 const minor = (v: string) => {
   const value = v.trim();
   return /^\d{1,9}(\.\d{1,2})?$/.test(value) && Number(value) > 0

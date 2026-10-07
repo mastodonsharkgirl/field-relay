@@ -5,17 +5,37 @@ import '../styles/global.css';
 
 <!doctype html>
 <html lang="en">
-  <head
-    ><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><title>
-      Field Relay — local order simulation
-    </title></head
-  ><body
-    ><noscript
-      ><main>
-        <h1>Field Relay</h1><p>
-          A browser-only partner-order CSV simulation. JavaScript is needed for its local workbench.
-        </p><p><a href="case-study/">Case study and architecture</a></p>
-      </main></noscript
-    ><Workbench client:load /></body
-  >
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Field Relay — compare local CSV exports</title>
+    <meta
+      name="description"
+      content="Compare two local CSV exports by mapped ID, inspect exact row evidence, and download a review report without uploading files."
+    />
+  </head>
+  <body>
+    <noscript>
+      <style>
+        astro-island {
+          display: none !important;
+        }
+      </style>
+      <main class="case-study">
+        <p class="eyebrow">FIELD RELAY / STATIC REFERENCE</p>
+        <h1>A browser-only CSV reconciliation desk.</h1>
+        <p class="lede">
+          JavaScript is needed to compare two mapped CSV exports, inspect their exact rows, record
+          local review decisions, and download the findings. The separate delivery lab is fictional.
+          Nothing is uploaded or sent.
+        </p>
+        <p>
+          Read how the comparison keeps source evidence and why the separate fictional delivery lab
+          quarantines conflicts and prevents a repeat local delivery.
+        </p>
+        <p><a href="case-study/">Read the case study and workflow boundaries</a></p>
+      </main>
+    </noscript>
+    <Workbench client:load />
+  </body>
 </html>
