@@ -2008,14 +2008,14 @@ footer {
     margin-block: 3px;
   }
 }
-.mobile-filter-control {
+.finding-controls > label.mobile-filter-control {
   display: none;
 }
 @media (max-width: 500px) {
   .finding-controls .filter-bar {
     display: none;
   }
-  .finding-controls .mobile-filter-control {
+  .finding-controls > label.mobile-filter-control {
     display: grid;
     width: 100%;
     min-width: 0;

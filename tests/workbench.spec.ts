@@ -224,6 +224,8 @@ test('keeps mapped setup and results in bounds at enlarged text and gives phone 
     const page = await context.newPage();
     await page.goto(baseURL!);
     await page.locator('astro-island:not([ssr])').waitFor();
+    await expect(page.locator('.mobile-filter-control')).toBeHidden();
+    await expect(page.locator('.finding-controls .filter-bar')).toBeVisible();
     await page.getByRole('button', { name: 'Change inputs and mapping' }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await context.close();
@@ -233,6 +235,13 @@ test('keeps mapped setup and results in bounds at enlarged text and gives phone 
     const page = await context.newPage();
     await page.goto(baseURL!);
     await page.locator('astro-island:not([ssr])').waitFor();
+    if (width === 390) {
+      await expect(page.locator('.mobile-filter-control')).toBeVisible();
+      await expect(page.locator('.finding-controls .filter-bar')).toBeHidden();
+    } else {
+      await expect(page.locator('.mobile-filter-control')).toBeHidden();
+      await expect(page.locator('.finding-controls .filter-bar')).toBeVisible();
+    }
     await page.evaluate(() => {
       document.documentElement.style.fontSize = '200%';
     });
