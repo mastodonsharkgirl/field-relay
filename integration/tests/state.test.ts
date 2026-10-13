@@ -25,7 +25,7 @@ const withStore = (run: (path: string) => void) => {
   try {
     run(path);
   } finally {
-    try { rmSync(directory, { recursive: true, force: true }); } catch { /* an assertion may have left SQLite open */ }
+    rmSync(directory, { recursive: true, force: true });
   }
 };
 
@@ -290,6 +290,37 @@ test('a same-ID receipt with a changed immutable timestamp is held and the first
     const snapshot = store.recordInspection(job.jobId, present('vendor-1', '2026-10-13T00:00:01.000Z'), 1_002);
     assert.equal(snapshot.receipt?.committedAt, '2026-10-13T00:00:00.000Z');
     assert.equal(snapshot.holdReason, 'integrity_failure');
+    store.close();
+  });
+});
+
+test('an admitted worker cannot replace an operator-verified receipt', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+    const claim = store.reservePost(approved.jobId, 'worker', 1_001);
+    if (claim.kind !== 'admitted') throw Error('expected admission');
+    store.recordInspection(claim.jobId, present('operator-receipt'), 1_002);
+    const conflicting = present('worker-receipt');
+    if (conflicting.kind !== 'present') throw Error('expected present observation');
+    const snapshot = store.settle(claim, { classification: 'delivered', httpStatus: 201, nextAttemptAt: null, receipt: conflicting.receipt }, 1_003);
+    assert.equal(snapshot.receipt?.vendorOrderId, 'operator-receipt');
+    assert.equal(snapshot.holdReason, 'integrity_failure');
+    store.close();
+  });
+});
+
+test('automatic read at the recovery deadline does not consume a GET slot', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+    const claim = store.reservePost(approved.jobId, 'worker', 1_001);
+    if (claim.kind !== 'admitted') throw Error('expected admission');
+    store.settle(claim, retry(null), 1_002);
+    assert.equal(store.reserveRead(approved.jobId, 31_001).kind, 'blocked');
+    assert.equal(store.snapshot(approved.jobId).getReservations, 0);
     store.close();
   });
 });

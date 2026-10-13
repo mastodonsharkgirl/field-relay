@@ -98,7 +98,7 @@ class SqliteRelayStore implements RelayStore {
     return {
       schemaVersion: receipt.schemaVersion, vendorOrderId: receipt.vendorOrderId,
       idempotencyKey: receipt.idempotencyKey, businessKey: receipt.businessKey,
-      payloadDigest: receipt.payloadDigest, order: receipt.order,
+      order: [receipt.order.schemaVersion, receipt.order.partner, receipt.order.orderId, receipt.order.region, receipt.order.quantity, receipt.order.amountMinor],
       committedAt: receipt.committedAt, storeId: receipt.storeId,
     };
   }
@@ -280,7 +280,14 @@ class SqliteRelayStore implements RelayStore {
       let observed: JobSnapshot['observed'] = String(row.observed) as JobSnapshot['observed'];
       if (result.receipt) {
         const receipt = parseReceipt(result.receipt, validateOrder(JSON.parse(String(row.order_json))), String(row.vendor_store_id));
-        receiptJson = JSON.stringify(receipt);
+        if (row.receipt_json !== null) {
+          const existing = parseReceipt(JSON.parse(String(row.receipt_json)), validateOrder(JSON.parse(String(row.order_json))), String(row.vendor_store_id));
+          if (JSON.stringify(this.#immutableReceipt(existing)) !== JSON.stringify(this.#immutableReceipt(receipt))) {
+            this.#db.prepare("UPDATE jobs SET hold_reason = 'integrity_failure' WHERE job_id = ?").run(admission.jobId);
+            this.#event(admission.jobId, 'held', now, { reason: 'integrity_failure' });
+            receiptJson = null;
+          } else receiptJson = JSON.stringify(receipt);
+        } else receiptJson = JSON.stringify(receipt);
         observed = 'present';
       }
       this.#db.prepare(`UPDATE jobs SET lease_id = NULL, lease_expires_at = NULL, outcome = ?, observed = ?, receipt_json = COALESCE(?, receipt_json), next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(result.classification, observed, receiptJson, result.nextAttemptAt, now, now, admission.jobId);
