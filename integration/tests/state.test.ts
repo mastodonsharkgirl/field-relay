@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { DatabaseSync } from 'node:sqlite';
 
 import { openRelayStore } from '../relay/state.ts';
 import { identify } from '../relay/contract.ts';
@@ -290,5 +291,97 @@ test('a same-ID receipt with a changed immutable timestamp is held and the first
     assert.equal(snapshot.receipt?.committedAt, '2026-10-13T00:00:00.000Z');
     assert.equal(snapshot.holdReason, 'integrity_failure');
     store.close();
+  });
+});
+
+test('changed vendor store ID holds the immutable original body', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const job = store.enqueue(order, 'fixture-store', 1_000);
+    const held = store.enqueue(order, 'replacement-store', 1_001);
+    assert.equal(held.jobId, job.jobId);
+    assert.equal(held.vendorStoreId, 'fixture-store');
+    assert.deepEqual(held.order, order);
+    assert.equal(held.holdReason, 'store_mismatch');
+    store.close();
+  });
+});
+
+test('audit insertion failure rolls back the enclosing state mutation', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const db = new DatabaseSync(path);
+    db.exec(`CREATE TRIGGER fail_approval_audit BEFORE INSERT ON audit_events
+      WHEN NEW.kind = 'approved' BEGIN SELECT RAISE(ABORT, 'audit failure'); END;`);
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const before = store.events(pending.jobId).length;
+    assert.throws(() => store.approve(pending.jobId, pending.approvalRevision, 1_001), /audit failure/);
+    assert.equal(store.snapshot(pending.jobId).approvalState, 'pending');
+    assert.equal(store.events(pending.jobId).length, before);
+    db.close();
+    store.close();
+  });
+});
+
+test('corrupt bytes and unknown schema fail closed without overwriting relay state', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
+  const corrupt = join(directory, 'corrupt.sqlite');
+  const unknown = join(directory, 'unknown.sqlite');
+  try {
+    const corruptDb = new DatabaseSync(corrupt);
+    corruptDb.exec('CREATE TABLE x(value TEXT); INSERT INTO x VALUES (\'unchanged\');');
+    corruptDb.close();
+    assert.throws(() => openRelayStore(corrupt, 'resume'));
+    const raw = new DatabaseSync(corrupt);
+    assert.equal(raw.prepare('SELECT value FROM x').get()?.value, 'unchanged');
+    raw.close();
+    const unknownDb = new DatabaseSync(unknown);
+    unknownDb.exec("CREATE TABLE metadata(name TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO metadata VALUES ('schemaVersion', '99');");
+    unknownDb.close();
+    assert.throws(() => openRelayStore(unknown, 'resume'), /unknown schema/i);
+    const verify = new DatabaseSync(unknown);
+    assert.equal(verify.prepare("SELECT value FROM metadata WHERE name='schemaVersion'").get()?.value, '99');
+    verify.close();
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('transaction lock fails within the configured busy bound without partial mutation', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const lock = new DatabaseSync(path);
+    lock.exec('BEGIN EXCLUSIVE');
+    const started = Date.now();
+    assert.throws(() => store.approve(pending.jobId, pending.approvalRevision, 1_001));
+    assert.ok(Date.now() - started < 1_000);
+    lock.exec('ROLLBACK');
+    lock.close();
+    assert.equal(store.snapshot(pending.jobId).approvalState, 'pending');
+    store.close();
+  });
+});
+
+test('separate connections preserve admission ordering and monotonic attempts/audit across resume', () => {
+  withStore((path) => {
+    let first = openRelayStore(path, 'new');
+    const pending = first.enqueue(order, 'fixture-store', 1_000);
+    const approved = first.approve(pending.jobId, pending.approvalRevision, 1_000);
+    const second = openRelayStore(path, 'resume');
+    second.enqueue({ ...order, quantity: 4 }, 'fixture-store', 1_001);
+    assert.equal(first.reservePost(approved.jobId, 'first', 1_002).kind, 'blocked');
+    first.close(); second.close();
+    first = openRelayStore(path, 'resume');
+    const clean = first.enqueue({ ...order, orderId: '0008' }, 'fixture-store', 2_000);
+    first.approve(clean.jobId, clean.approvalRevision, 2_000);
+    const admission = first.reservePost(clean.jobId, 'first', 2_001);
+    if (admission.kind !== 'admitted') throw Error('expected admission');
+    const competitor = openRelayStore(path, 'resume');
+    competitor.enqueue({ ...order, orderId: '0008', quantity: 4 }, 'fixture-store', 2_002);
+    assert.equal(first.snapshot(clean.jobId).order.quantity, 3);
+    assert.equal(first.reservePost(clean.jobId, 'second', 2_003).kind, 'blocked');
+    const events = first.events(clean.jobId);
+    assert.deepEqual(events.map((event) => event.sequence), [...events.map((event) => event.sequence)].sort((a, b) => a - b));
+    assert.equal(admission.attempt, 1);
+    competitor.close(); first.close();
   });
 });
