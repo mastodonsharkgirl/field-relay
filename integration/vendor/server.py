@@ -18,20 +18,57 @@ REQUEST_ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '503_once', '401', '403', '422', 'timeout_before_commit', 'timeout_after_commit', 'malformed_success', 'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'hold_after_commit', 'rollback_transaction'}
 
 
+READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked'}
+
+
+class DeadlineReader:
+    """Unbuffered request reader so slow-drip bytes share one request deadline."""
+    def __init__(self, connection, handler):
+        self.connection, self.handler = connection, handler
+
+    def _recv(self, size):
+        self.handler._remaining()
+        return self.connection.recv(size)
+
+    def readline(self, limit=-1):
+        chunks = []
+        while limit < 0 or sum(map(len, chunks)) < limit:
+            byte = self._recv(1)
+            if not byte: break
+            chunks.append(byte)
+            if byte == b'\n': break
+        return b''.join(chunks)
+
+    def read(self, size=-1):
+        if size < 0: raise ValueError('bounded reads required')
+        chunks, remaining = [], size
+        while remaining:
+            part = self._recv(remaining)
+            if not part: break
+            chunks.append(part)
+            remaining -= len(part)
+        return b''.join(chunks)
+
+    def close(self):
+        return None
+
+
 def expand_scenario(sequence):
-    expanded = []
+    post, get = [], []
     for action in sequence:
-        if action == '429_once': expanded.extend(('429', 'healthy'))
-        elif action == '429_twice': expanded.extend(('429', '429', 'healthy'))
-        elif action == '429_repeat': expanded.extend(('429',) * 8)
-        elif action == '503_once': expanded.extend(('503', 'healthy'))
-        else: expanded.append(action)
-    return expanded
+        if action in READBACK_ACTIONS: get.append(action)
+        elif action == '429_once': post.extend(('429', 'healthy'))
+        elif action == '429_twice': post.extend(('429', '429', 'healthy'))
+        elif action == '429_repeat': post.extend(('429',) * 8)
+        elif action == '503_once': post.extend(('503', 'healthy'))
+        else: post.append(action)
+    return post, get
 
 
-def create_server(store_path: Path, mode: str, token: str, admin_token: str):
+def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> ThreadingHTTPServer:
     store = VendorStore(store_path, mode)
     barriers = {}
+    barrier_lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'FieldRelayMock/1'
@@ -39,6 +76,19 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
 
         def log_message(self, *_):
             return
+
+        def setup(self):
+            super().setup()
+            self.rfile = DeadlineReader(self.connection, self)
+
+        def handle_one_request(self):
+            self._deadline = time.monotonic() + .75
+            return super().handle_one_request()
+
+        def _remaining(self):
+            remaining = self._deadline - time.monotonic()
+            if remaining <= 0: raise TimeoutError
+            self.connection.settimeout(remaining)
 
         def _error(self, status, code, request_id='server'):
             self._json(status, {'schemaVersion': 1, 'code': code, 'requestId': request_id, 'message': 'Synthetic vendor request rejected.'})
@@ -58,7 +108,7 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
                 self._error(400, 'unsupported_framing'); return False
             if any(len(self.headers.get_all(name, [])) != 1 for name in names if self.headers.get_all(name, [])):
                 self._error(400, 'duplicate_header'); return False
-            if self.headers.get('Origin'):
+            if self.headers.get_all('Origin', []):
                 self._error(400, 'origin_rejected'); return False
             if self.headers.get('Host') != f'127.0.0.1:{self.server.server_port}':
                 self._error(400, 'host_rejected'); return False
@@ -76,8 +126,14 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
             except (TypeError, ValueError): self._error(400, 'invalid_content_length'); return None
             if size < 0 or size > MAX_BODY:
                 self._error(413, 'body_too_large'); return None
-            self.connection.settimeout(.75)
-            try: return self.rfile.read(size)
+            try:
+                self._remaining()
+                body = self.rfile.read(size)
+                if len(body) != size:
+                    self._error(400, 'incomplete_body'); return None
+                if time.monotonic() > self._deadline:
+                    self._error(400, 'body_timeout'); return None
+                return body
             except TimeoutError: self._error(400, 'body_timeout'); return None
 
         def _request_id(self):
@@ -94,7 +150,7 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
             prefix = '/v1/orders/'
             if self.path.startswith(prefix) and KEY.fullmatch(self.path[len(prefix):]):
                 key = self.path[len(prefix):]
-                action, _ = store.consume_scenario(key)
+                action, _ = store.consume_scenario(key, 'get')
                 if action == 'readback_unavailable': self._error(503, 'synthetic_readback_unavailable'); return
                 if action == 'readback_blocked': self._error(423, 'synthetic_readback_blocked'); return
                 receipt = store.get_order(key)
@@ -113,22 +169,26 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
                 if not admin_value.startswith('Bearer ') or not hmac.compare_digest(admin_value[7:], admin_token):
                     self._error(403 if admin_value.startswith('Bearer ') else 401, 'admin_required')
                     return
+                if self.headers.get('Content-Type') != 'application/json': self._error(415, 'content_type_required'); return
                 body = self._body()
                 if body is None: return
                 try: payload = json.loads(body.decode())
                 except (UnicodeDecodeError, json.JSONDecodeError): self._error(400, 'invalid_json'); return
+                if not isinstance(payload, dict): self._error(422, 'invalid_scenario'); return
                 action, key = payload.get('action'), payload.get('idempotencyKey')
                 if action not in ('configure', 'observe', 'release') or not isinstance(key, str) or not KEY.fullmatch(key): self._error(422, 'invalid_scenario'); return
                 if action == 'configure':
                     sequence = payload.get('scenario')
-                    if not isinstance(sequence, list) or not 1 <= len(sequence) <= 8 or any(item not in SCENARIOS for item in sequence): self._error(422, 'invalid_scenario'); return
-                    expanded = expand_scenario(sequence)
-                    if len(expanded) > 16: self._error(422, 'invalid_scenario'); return
-                    store.configure_scenario(key, expanded); self._json(200, store.observe_scenario(key)); return
+                    if set(payload) != {'action', 'idempotencyKey', 'scenario'} or not isinstance(sequence, list) or not 1 <= len(sequence) <= 8 or any(not isinstance(item, str) or item not in SCENARIOS for item in sequence): self._error(422, 'invalid_scenario'); return
+                    post, get = expand_scenario(sequence)
+                    if len(post) > 16 or len(get) > 8: self._error(422, 'invalid_scenario'); return
+                    with barrier_lock: barriers[key] = threading.Event()
+                    store.configure_scenario(key, post, get); self._json(200, store.observe_scenario(key)); return
                 if action == 'release':
-                    barrier = barriers.get(key)
-                    if barrier: barrier.set()
-                    self._json(200, {'phase': 'released', 'sequence': 0, 'requestCount': 0}); return
+                    if set(payload) != {'action', 'idempotencyKey'}: self._error(422, 'invalid_scenario'); return
+                    with barrier_lock: barriers.setdefault(key, threading.Event()).set()
+                    self._json(200, store.observe_scenario(key)); return
+                if set(payload) != {'action', 'idempotencyKey'}: self._error(422, 'invalid_scenario'); return
                 self._json(200, store.observe_scenario(key)); return
             if not self._auth(token): return
             if self.path != '/v1/orders': self._error(404, 'not_found'); return
@@ -141,7 +201,7 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
             if body is None: return
             try: order = decode_order(body)
             except ValueError: self._error(422, 'invalid_order', request_id); return
-            action, _ = store.consume_scenario(key)
+            action, _ = store.consume_scenario(key, 'post')
             faults = {'429': 429, '503': 503, '401': 401, '403': 403, '422': 422}
             if action in faults:
                 self._error(faults[action], 'synthetic_' + action, request_id); return
@@ -151,7 +211,8 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
             except RuntimeError:
                 self._error(500, 'synthetic_transaction_rollback', request_id); return
             if action == 'hold_after_commit':
-                barrier = barriers.setdefault(key, threading.Event()); barrier.wait(5)
+                with barrier_lock: barrier = barriers.setdefault(key, threading.Event())
+                barrier.wait(5)
             if action == 'timeout_after_commit': time.sleep(5); return
             if action == 'malformed_success': self._json(200, {'schemaVersion': 1}); return
             self._json(status, receipt if status < 400 else {'schemaVersion': 1, 'requestId': request_id, **receipt})

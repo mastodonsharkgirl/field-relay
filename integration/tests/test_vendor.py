@@ -126,15 +126,25 @@ class VendorHttpTests(unittest.TestCase):
         self.state = Path(self.tmp.name) / 'state'
         self.token = 'ordinary-test-token'
         self.admin = 'admin-test-token'
-        env = {'PATH': os.environ['PATH'], 'SYSTEMROOT': os.environ['SYSTEMROOT'], 'PYTHONPATH': str(ROOT.parents[0]), 'FIELD_RELAY_VENDOR_TOKEN': self.token,
+        self.env = {'PATH': os.environ['PATH'], 'SYSTEMROOT': os.environ['SYSTEMROOT'], 'PYTHONPATH': str(ROOT.parents[0]), 'FIELD_RELAY_VENDOR_TOKEN': self.token,
                'FIELD_RELAY_VENDOR_ADMIN_TOKEN': self.admin}
+        self.start_server('new')
+
+    def start_server(self, mode):
         self.proc = subprocess.Popen(
-            [sys.executable, '-m', 'integration.vendor.server', '--state-dir', str(self.state), '--mode', 'new'],
-            cwd=ROOT.parents[0], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            [sys.executable, '-m', 'integration.vendor.server', '--state-dir', str(self.state), '--mode', mode],
+            cwd=ROOT.parents[0], env=self.env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         line = self.proc.stdout.readline().strip()
         self.ready = json.loads(line)
         self.port = self.ready['port']
+
+    def restart_server(self):
+        self.proc.terminate()
+        self.proc.wait(timeout=5)
+        self.proc.stdout.close()
+        self.proc.stderr.close()
+        self.start_server('resume')
 
     def tearDown(self):
         self.proc.terminate()
@@ -149,12 +159,13 @@ class VendorHttpTests(unittest.TestCase):
             headers['Authorization'] = f'Bearer {token}'
         headers.update(extra or {})
         connection = http.client.HTTPConnection('127.0.0.1', self.port, timeout=2)
-        connection.request(method, path, body=body, headers=headers)
-        response = connection.getresponse()
-        data = response.read()
-        result = response.status, dict(response.getheaders()), json.loads(data) if data else None
-        connection.close()
-        return result
+        try:
+            connection.request(method, path, body=body, headers=headers)
+            response = connection.getresponse()
+            data = response.read()
+            return response.status, dict(response.getheaders()), json.loads(data) if data else None
+        finally:
+            connection.close()
 
     def order_headers(self, order=ORDER):
         return {'Content-Type': 'application/json', 'Idempotency-Key': identify(order)['idempotencyKey'], 'X-Request-Id': 'request_1'}
@@ -168,6 +179,34 @@ class VendorHttpTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(headers['Cache-Control'], 'no-store')
         self.assertEqual(health['storeId'], self.ready['storeId'])
+
+    def test_host_empty_origin_and_admin_shape_are_rejected_safely(self):
+        self.assertEqual(self.request('GET', '/v1/health', token=self.token, extra={'Host': 'localhost'})[0], 400)
+        self.assertEqual(self.request('GET', '/v1/health', token=self.token, extra={'Origin': ''})[0], 400)
+        for body in (b'[]', b'null', b'1', b'{"action":"observe","idempotencyKey":"' + b'a' * 64 + b'","extra":true}', b'{"action":"configure","idempotencyKey":"' + b'a' * 64 + b'","scenario":[{}]}'):
+            status, _, error = self.request('POST', '/__lab/scenarios', body, self.admin, {'Content-Type': 'application/json'})
+            self.assertEqual(status, 422)
+            self.assertEqual(error['message'], 'Synthetic vendor request rejected.')
+        self.assertEqual(self.request('POST', '/__lab/scenarios', b'{}', self.admin, {'Content-Type': 'text/plain'})[0], 415)
+
+    def test_short_body_and_slow_drip_never_create_an_order(self):
+        key = identify(ORDER)['idempotencyKey']
+        header = (f'POST /v1/orders HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nAuthorization: Bearer {self.token}\r\nContent-Type: application/json\r\nIdempotency-Key: {key}\r\nX-Request-Id: short\r\nContent-Length: 50\r\n\r\n{{}}').encode()
+        with socket.create_connection(('127.0.0.1', self.port), timeout=2) as connection:
+            connection.sendall(header)
+            connection.shutdown(socket.SHUT_WR)
+            self.assertIn(b' 400 ', connection.recv(1024))
+        drip = b'GET /v1/health HTTP/1.1\r\nHost: '
+        started = time.monotonic()
+        with socket.create_connection(('127.0.0.1', self.port), timeout=2) as connection:
+            for byte in drip:
+                try: connection.send(bytes([byte]))
+                except OSError: break
+                time.sleep(.09)
+            try: connection.recv(1)
+            except OSError: pass
+        self.assertLess(time.monotonic() - started, 1.6)
+        self.assertEqual(self.request('GET', '/v1/orders', token=self.token)[2]['count'], 0)
 
     def test_create_replay_conflict_and_http_readback(self):
         body = json.dumps(ORDER).encode()
@@ -246,6 +285,56 @@ class VendorHttpTests(unittest.TestCase):
         finally:
             connection.close()
         self.assertEqual(self.request('POST', '/v1/orders', json.dumps(ORDER).encode(), self.token, self.order_headers())[0], 201)
+
+    def test_post_fault_sequences_ignore_gets_and_survive_restart(self):
+        key = identify(ORDER)['idempotencyKey']
+        self.assertEqual(self.configure(key, ['429_twice'])[0], 200)
+        body = json.dumps(ORDER).encode()
+        self.assertEqual(self.request('POST', '/v1/orders', body, self.token, self.order_headers())[0], 429)
+        self.restart_server()
+        self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[0], 404)
+        self.assertEqual(self.request('POST', '/v1/orders', body, self.token, self.order_headers())[0], 429)
+        self.assertEqual(self.request('POST', '/v1/orders', body, self.token, self.order_headers())[0], 201)
+        for permanent, expected in (('401', 401), ('403', 403), ('422', 422)):
+            order = {**ORDER, 'orderId': f'P-{permanent}'}
+            other = identify(order)['idempotencyKey']
+            self.assertEqual(self.configure(other, [permanent])[0], 200)
+            self.assertEqual(self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))[0], expected)
+            self.assertEqual(self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))[0], expected)
+
+    def test_remaining_fixed_post_faults_and_exact_readback(self):
+        body = json.dumps(ORDER).encode()
+        cases = (('429_once', 429, 201), ('503_once', 503, 201), ('malformed_success', 200), ('timeout_after_commit',))
+        for index, item in enumerate(cases):
+            order = {**ORDER, 'orderId': f'F-{index}'}
+            key = identify(order)['idempotencyKey']
+            self.assertEqual(self.configure(key, [item[0]])[0], 200)
+            if item[0] == 'timeout_after_commit':
+                with self.assertRaises((TimeoutError, OSError)):
+                    self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))
+                self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[2]['order'], order)
+                continue
+            statuses = [self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))[0] for _ in item[1:]]
+            self.assertEqual(tuple(statuses), item[1:])
+            if item[0] == 'malformed_success':
+                self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[2]['order'], order)
+
+    def test_http_capacity_and_independent_clients(self):
+        statuses = []
+        def post(order, request_id):
+            headers = self.order_headers(order); headers['X-Request-Id'] = request_id
+            statuses.append(self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, headers)[0])
+        first = {**ORDER, 'orderId': 'C-0'}
+        threads = [threading.Thread(target=post, args=(first if i % 2 == 0 else {**first, 'quantity': 4}, f'c{i}')) for i in range(8)]
+        for thread in threads: thread.start()
+        for thread in threads: thread.join()
+        self.assertEqual((statuses.count(201), statuses.count(200) + statuses.count(409)), (1, 7))
+        for index in range(1, 100): post({**ORDER, 'orderId': f'C-{index}'}, f'fill{index}')
+        overflow = {**ORDER, 'orderId': 'C-100'}
+        post(overflow, 'overflow')
+        listing = self.request('GET', '/v1/orders', token=self.token)[2]
+        self.assertEqual((statuses[-1], listing['count']), (422, 100))
+        self.assertLess(len(json.dumps(listing, separators=(',', ':')).encode()), 65536)
 
 
 if __name__ == '__main__':

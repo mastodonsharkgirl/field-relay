@@ -1,6 +1,7 @@
 import json
 import secrets
 import sqlite3
+from typing import Literal
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -12,7 +13,7 @@ MAX_ORDERS = 100
 
 
 class VendorStore:
-    def __init__(self, path: Path, mode: str):
+    def __init__(self, path: Path, mode: Literal['new', 'resume']):
         if mode not in ('new', 'resume'):
             raise ValueError('mode must be new or resume')
         self.path = Path(path)
@@ -59,9 +60,12 @@ class VendorStore:
                 );
                 CREATE TABLE scenarios (
                     idempotency_key TEXT PRIMARY KEY,
-                    sequence_json TEXT NOT NULL,
-                    next_index INTEGER NOT NULL DEFAULT 0,
-                    request_count INTEGER NOT NULL DEFAULT 0
+                    post_sequence_json TEXT NOT NULL,
+                    get_sequence_json TEXT NOT NULL,
+                    post_index INTEGER NOT NULL DEFAULT 0,
+                    get_index INTEGER NOT NULL DEFAULT 0,
+                    post_request_count INTEGER NOT NULL DEFAULT 0,
+                    get_request_count INTEGER NOT NULL DEFAULT 0
                 );
             ''')
             connection.execute('INSERT INTO metadata(name, value) VALUES (?, ?)', ('schemaVersion', str(SCHEMA_VERSION)))
@@ -100,14 +104,16 @@ class VendorStore:
             receipt['replayed'] = replayed
         return receipt
 
-    def create_or_replay(self, order: dict, key: str, request_id: str, *, _rollback_for_test=False):
+    def create_or_replay(self, order: dict, key: str, request_id: str, *, _rollback_for_test=False) -> tuple[int, dict]:
         valid = validate_order(order)
         identity = identify(valid)
-        if key != identity['idempotencyKey']:
-            return 409, {'code': 'idempotency_key_mismatch'}
         connection = self._connect()
         try:
             connection.execute('BEGIN IMMEDIATE')
+            if key != identity['idempotencyKey']:
+                connection.execute('INSERT INTO request_audit(request_id,idempotency_key,event,created_at) VALUES(?,?,?,?)', (request_id, key, 'idempotency_key_mismatch', self._now()))
+                connection.commit()
+                return 409, {'code': 'idempotency_key_mismatch'}
             row = connection.execute('''SELECT orders.*, (SELECT value FROM metadata WHERE name='storeId') store_id
                 FROM orders WHERE idempotency_key=?''', (key,)).fetchone()
             if row:
@@ -163,27 +169,32 @@ class VendorStore:
         finally:
             connection.close()
 
-    def consume_scenario(self, key):
+    def consume_scenario(self, key: str, route: Literal['post', 'get']) -> tuple[str, int]:
         connection = self._connect()
         try:
             connection.execute('BEGIN IMMEDIATE')
             row = connection.execute('SELECT * FROM scenarios WHERE idempotency_key=?', (key,)).fetchone()
             if not row:
                 connection.commit(); return 'healthy', 0
-            sequence = json.loads(row['sequence_json'])
-            index = row['next_index']
+            sequence = json.loads(row[f'{route}_sequence_json'])
+            index = row[f'{route}_index']
             action = sequence[index] if index < len(sequence) else 'healthy'
-            connection.execute('UPDATE scenarios SET next_index=?, request_count=request_count+1 WHERE idempotency_key=?', (index + 1, key))
+            next_index = index if action in ('401', '403', '422') else index + 1
+            connection.execute(f'UPDATE scenarios SET {route}_index=?, {route}_request_count={route}_request_count+1 WHERE idempotency_key=?', (next_index, key))
             connection.commit()
             return action, index + 1
         finally:
             connection.close()
 
-    def configure_scenario(self, key, sequence):
+    def configure_scenario(self, key: str, post_sequence: list[str], get_sequence: list[str]):
         connection = self._connect()
         try:
             connection.execute('BEGIN IMMEDIATE')
-            connection.execute('INSERT INTO scenarios(idempotency_key,sequence_json,next_index,request_count) VALUES(?,?,0,0) ON CONFLICT(idempotency_key) DO UPDATE SET sequence_json=excluded.sequence_json,next_index=0,request_count=0', (key, json.dumps(sequence, separators=(',', ':'))))
+            connection.execute('''INSERT INTO scenarios(idempotency_key,post_sequence_json,get_sequence_json)
+                VALUES(?,?,?) ON CONFLICT(idempotency_key) DO UPDATE SET
+                post_sequence_json=excluded.post_sequence_json,get_sequence_json=excluded.get_sequence_json,
+                post_index=0,get_index=0,post_request_count=0,get_request_count=0''',
+                (key, json.dumps(post_sequence, separators=(',', ':')), json.dumps(get_sequence, separators=(',', ':'))))
             connection.commit()
         finally:
             connection.close()
@@ -191,8 +202,8 @@ class VendorStore:
     def observe_scenario(self, key):
         connection = self._connect()
         try:
-            row = connection.execute('SELECT next_index,request_count FROM scenarios WHERE idempotency_key=?', (key,)).fetchone()
-            return {'phase': 'configured' if row else 'healthy', 'sequence': row['next_index'] if row else 0, 'requestCount': row['request_count'] if row else 0}
+            row = connection.execute('SELECT post_index,get_index,post_request_count,get_request_count FROM scenarios WHERE idempotency_key=?', (key,)).fetchone()
+            return {'phase': 'configured' if row else 'healthy', 'sequence': {'post': row['post_index'], 'get': row['get_index']} if row else {'post': 0, 'get': 0}, 'requestCount': {'post': row['post_request_count'], 'get': row['get_request_count']} if row else {'post': 0, 'get': 0}}
         finally:
             connection.close()
 
