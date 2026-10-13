@@ -103,6 +103,25 @@ class VendorStoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             VendorStore(versioned, 'resume')
 
+    def test_resume_rejects_previous_scenario_schema_without_overwriting_it(self):
+        from integration.vendor.store import VendorStore
+
+        legacy = Path(self.tmp.name) / 'legacy'
+        legacy.mkdir()
+        connection = sqlite3.connect(legacy / 'vendor.sqlite')
+        try:
+            connection.executescript('''CREATE TABLE metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE scenarios (idempotency_key TEXT PRIMARY KEY, sequence_json TEXT NOT NULL,
+                next_index INTEGER NOT NULL DEFAULT 0, request_count INTEGER NOT NULL DEFAULT 0);
+                INSERT INTO metadata VALUES ('schemaVersion', '1'); INSERT INTO metadata VALUES ('storeId', 'store-old');''')
+            connection.commit()
+        finally:
+            connection.close()
+        original = (legacy / 'vendor.sqlite').read_bytes()
+        with self.assertRaises(ValueError):
+            VendorStore(legacy, 'resume')
+        self.assertEqual((legacy / 'vendor.sqlite').read_bytes(), original)
+
     def test_concurrent_same_and_changed_payloads_create_one_order(self):
         from integration.vendor.store import VendorStore
 
@@ -335,6 +354,40 @@ class VendorHttpTests(unittest.TestCase):
         listing = self.request('GET', '/v1/orders', token=self.token)[2]
         self.assertEqual((statuses[-1], listing['count']), (422, 100))
         self.assertLess(len(json.dumps(listing, separators=(',', ':')).encode()), 65536)
+
+    def test_concurrent_http_clients_map_winner_to_exact_committed_receipt_then_restart(self):
+        original = {**ORDER, 'orderId': 'WIN-1'}
+        changed = {**original, 'quantity': 4}
+        key = identify(original)['idempotencyKey']
+        outcomes = []
+        def submit(label, order):
+            headers = self.order_headers(order); headers['X-Request-Id'] = label
+            outcomes.append((label, order, self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, headers)[0]))
+        threads = [threading.Thread(target=submit, args=('original', original)), threading.Thread(target=submit, args=('changed', changed))]
+        for thread in threads: thread.start()
+        for thread in threads: thread.join()
+        winner = [order for _, order, status in outcomes if status == 201]
+        self.assertEqual(len(winner), 1)
+        receipt = self.request('GET', '/v1/orders/' + key, token=self.token)[2]
+        self.assertEqual(receipt['order'], winner[0])
+        self.restart_server()
+        resumed = self.request('GET', '/v1/orders/' + key, token=self.token)[2]
+        self.assertEqual(resumed, receipt)
+
+    def test_repeated_rate_limit_and_timeout_before_commit_leave_exact_http_evidence(self):
+        order = {**ORDER, 'orderId': 'REPEAT-1'}
+        key = identify(order)['idempotencyKey']
+        self.assertEqual(self.configure(key, ['429_repeat'])[0], 200)
+        for _ in range(8): self.assertEqual(self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))[0], 429)
+        self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[0], 404)
+        self.assertEqual(self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))[0], 201)
+        delayed = {**ORDER, 'orderId': 'PRECOMMIT-1'}
+        delayed_key = identify(delayed)['idempotencyKey']
+        self.assertEqual(self.configure(delayed_key, ['timeout_before_commit'])[0], 200)
+        with self.assertRaises((TimeoutError, OSError)):
+            self.request('POST', '/v1/orders', json.dumps(delayed).encode(), self.token, self.order_headers(delayed))
+        self.assertEqual(self.request('GET', '/v1/orders/' + delayed_key, token=self.token)[0], 404)
+        self.assertEqual(self.request('POST', '/v1/orders', json.dumps(delayed).encode(), self.token, self.order_headers(delayed))[0], 201)
 
 
 if __name__ == '__main__':

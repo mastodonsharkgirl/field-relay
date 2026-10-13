@@ -8,7 +8,7 @@ from pathlib import Path
 from .contract import identify, validate_order
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_ORDERS = 100
 
 
@@ -151,7 +151,7 @@ class VendorStore:
         finally:
             connection.close()
 
-    def get_order(self, key: str):
+    def get_order(self, key: str) -> dict | None:
         connection = self._connect()
         try:
             row = connection.execute('''SELECT orders.*, (SELECT value FROM metadata WHERE name='storeId') store_id
@@ -160,7 +160,7 @@ class VendorStore:
         finally:
             connection.close()
 
-    def list_orders(self):
+    def list_orders(self) -> dict:
         connection = self._connect()
         try:
             rows = connection.execute('SELECT idempotency_key,business_key,payload_digest,vendor_order_id,committed_at FROM orders ORDER BY id').fetchall()
@@ -207,5 +207,5 @@ class VendorStore:
         finally:
             connection.close()
 
-    def close(self):
+    def close(self) -> None:
         return None
