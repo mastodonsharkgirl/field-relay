@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import { clearTimeout, setTimeout } from 'node:timers';
+import { fileURLToPath } from 'node:url';
 
 import { openRelayStore } from '../relay/state.ts';
 import { identify } from '../relay/contract.ts';
@@ -43,23 +46,176 @@ const retry = (nextAttemptAt: number | null): AttemptResult => ({
   receipt: null,
 });
 
-const present = (vendorOrderId: string, committedAt = '2026-10-13T00:00:00.000Z'): ReadObservation => {
+const present = (
+  vendorOrderId: string,
+  committedAt = '2026-10-13T00:00:00.000Z',
+): ReadObservation => {
   const identity = identify(order);
   return {
-  kind: 'present',
-  receipt: {
-    schemaVersion: 1,
-    vendorOrderId,
-    idempotencyKey: identity.idempotencyKey,
-    businessKey: identity.businessKey,
-    payloadDigest: identity.payloadDigest,
-    order,
-    committedAt,
-    storeId: 'fixture-store',
-  },
-  httpStatus: 200,
-  nextAttemptAt: null,
+    kind: 'present',
+    receipt: {
+      schemaVersion: 1,
+      vendorOrderId,
+      idempotencyKey: identity.idempotencyKey,
+      businessKey: identity.businessKey,
+      payloadDigest: identity.payloadDigest,
+      order,
+      committedAt,
+      storeId: 'fixture-store',
+    },
+    httpStatus: 200,
+    nextAttemptAt: null,
   };
+};
+
+const processHarness = fileURLToPath(
+  new URL('./helpers/state-process-harness.mjs', import.meta.url),
+);
+
+type HarnessMessage = {
+  type: 'ready' | 'result' | 'barrier' | 'error';
+  operation?: string;
+  result?: unknown;
+  message?: string;
+};
+
+type OwnedChild = {
+  child: ChildProcess;
+  diagnostics: () => string;
+};
+
+const isHarnessMessage = (value: unknown): value is HarnessMessage => {
+  if (typeof value !== 'object' || value === null) return false;
+  const type = (value as Record<string, unknown>).type;
+  return type === 'ready' || type === 'result' || type === 'barrier' || type === 'error';
+};
+
+const asObject = (value: unknown): Record<string, unknown> => {
+  assert.ok(
+    typeof value === 'object' && value !== null,
+    `expected a process result object, got ${String(value)}`,
+  );
+  return value as Record<string, unknown>;
+};
+
+const startHarness = (
+  action: 'abort-approval' | 'worker',
+  path: string,
+  jobId: string,
+): OwnedChild => {
+  const child = spawn(
+    process.execPath,
+    [processHarness, action, path, jobId, JSON.stringify(order)],
+    {
+      stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
+      windowsHide: true,
+    },
+  );
+  let diagnostics = '';
+  child.stderr?.setEncoding('utf8');
+  child.stderr?.on('data', (chunk) => {
+    diagnostics += String(chunk);
+  });
+  return { child, diagnostics: () => diagnostics };
+};
+
+const waitForHarness = (
+  owned: OwnedChild,
+  type: HarnessMessage['type'],
+  operation?: string,
+): Promise<HarnessMessage> =>
+  new Promise((resolve, reject) => {
+    const { child } = owned;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const expected = operation ? `${type}/${operation}` : type;
+    const cleanup = () => {
+      if (timeout) clearTimeout(timeout);
+      child.off('message', onMessage);
+      child.off('exit', onExit);
+    };
+    const fail = (message: string) => {
+      cleanup();
+      reject(
+        Error(`${message}${owned.diagnostics() ? `\nchild stderr: ${owned.diagnostics()}` : ''}`),
+      );
+    };
+    const onMessage = (message: unknown) => {
+      if (!isHarnessMessage(message)) return;
+      if (message.type === 'error') {
+        fail(`child process reported ${message.message ?? 'an unknown error'}`);
+        return;
+      }
+      if (message.type === type && (operation === undefined || message.operation === operation)) {
+        cleanup();
+        resolve(message);
+      }
+    };
+    const onExit = (code: number | null, signal: string | null) => {
+      fail(
+        `child process exited before ${expected} (code ${String(code)}, signal ${String(signal)})`,
+      );
+    };
+    if (child.exitCode !== null || child.signalCode !== null) {
+      fail(`child process had already exited before ${expected}`);
+      return;
+    }
+    child.on('message', onMessage);
+    child.once('exit', onExit);
+    timeout = setTimeout(() => fail(`timed out waiting for child process ${expected}`), 5_000);
+  });
+
+const waitForExit = (
+  owned: OwnedChild,
+  label: string,
+): Promise<{ code: number | null; signal: string | null }> =>
+  new Promise((resolve, reject) => {
+    const { child } = owned;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      resolve({ code: child.exitCode, signal: child.signalCode });
+      return;
+    }
+    const timeout = setTimeout(() => {
+      child.off('exit', onExit);
+      reject(
+        Error(
+          `timed out waiting for owned child process ${label} to exit${owned.diagnostics() ? `\nchild stderr: ${owned.diagnostics()}` : ''}`,
+        ),
+      );
+    }, 5_000);
+    const onExit = (code: number | null, signal: string | null) => {
+      clearTimeout(timeout);
+      resolve({ code, signal });
+    };
+    child.once('exit', onExit);
+  });
+
+const sendHarnessCommand = (owned: OwnedChild, operation: string, now?: number) => {
+  assert.ok(owned.child.connected, `owned child process is disconnected before ${operation}`);
+  owned.child.send({ operation, ...(now === undefined ? {} : { now }) });
+};
+
+const closeWorker = async (owned: OwnedChild, label: string) => {
+  if (owned.child.exitCode === null && owned.child.signalCode === null) {
+    sendHarnessCommand(owned, 'close');
+  }
+  await waitForExit(owned, label);
+};
+
+const terminateOwnedChild = async (owned: OwnedChild, label: string) => {
+  if (owned.child.exitCode === null && owned.child.signalCode === null) {
+    owned.child.kill('SIGKILL');
+  }
+  await waitForExit(owned, label);
+};
+
+const createApprovedJob = (path: string, now: number) => {
+  const store = openRelayStore(path, 'new');
+  try {
+    const pending = store.enqueue(order, 'fixture-store', now);
+    return store.approve(pending.jobId, pending.approvalRevision, now);
+  } finally {
+    store.close();
+  }
 };
 
 test('new jobs require explicit approval bound to the immutable canonical order for ten minutes', () => {
@@ -103,7 +259,10 @@ test('stale approval and revocation revisions fail without mutating the durable 
     const pending = store.enqueue(order, 'fixture-store', 1_000);
     assert.throws(() => store.approve(pending.jobId, 99, 1_001), /revision/i);
     const approved = store.approve(pending.jobId, pending.approvalRevision, 1_002);
-    assert.throws(() => store.revoke(approved.jobId, pending.approvalRevision, 'operator hold', 1_003), /revision/i);
+    assert.throws(
+      () => store.revoke(approved.jobId, pending.approvalRevision, 'operator hold', 1_003),
+      /revision/i,
+    );
     assert.equal(store.snapshot(pending.jobId).approvalState, 'approved');
     store.close();
   });
@@ -287,7 +446,11 @@ test('a same-ID receipt with a changed immutable timestamp is held and the first
     const store = openRelayStore(path, 'new');
     const job = store.enqueue(order, 'fixture-store', 1_000);
     store.recordInspection(job.jobId, present('vendor-1'), 1_001);
-    const snapshot = store.recordInspection(job.jobId, present('vendor-1', '2026-10-13T00:00:01.000Z'), 1_002);
+    const snapshot = store.recordInspection(
+      job.jobId,
+      present('vendor-1', '2026-10-13T00:00:01.000Z'),
+      1_002,
+    );
     assert.equal(snapshot.receipt?.committedAt, '2026-10-13T00:00:00.000Z');
     assert.equal(snapshot.holdReason, 'integrity_failure');
     store.close();
@@ -304,7 +467,16 @@ test('an admitted worker cannot replace an operator-verified receipt', () => {
     store.recordInspection(claim.jobId, present('operator-receipt'), 1_002);
     const conflicting = present('worker-receipt');
     if (conflicting.kind !== 'present') throw Error('expected present observation');
-    const snapshot = store.settle(claim, { classification: 'delivered', httpStatus: 201, nextAttemptAt: null, receipt: conflicting.receipt }, 1_003);
+    const snapshot = store.settle(
+      claim,
+      {
+        classification: 'delivered',
+        httpStatus: 201,
+        nextAttemptAt: null,
+        receipt: conflicting.receipt,
+      },
+      1_003,
+    );
     assert.equal(snapshot.receipt?.vendorOrderId, 'operator-receipt');
     assert.equal(snapshot.holdReason, 'integrity_failure');
     store.close();
@@ -346,7 +518,10 @@ test('audit insertion failure rolls back the enclosing state mutation', () => {
       WHEN NEW.kind = 'approved' BEGIN SELECT RAISE(ABORT, 'audit failure'); END;`);
     const pending = store.enqueue(order, 'fixture-store', 1_000);
     const before = store.events(pending.jobId).length;
-    assert.throws(() => store.approve(pending.jobId, pending.approvalRevision, 1_001), /audit failure/);
+    assert.throws(
+      () => store.approve(pending.jobId, pending.approvalRevision, 1_001),
+      /audit failure/,
+    );
     assert.equal(store.snapshot(pending.jobId).approvalState, 'pending');
     assert.equal(store.events(pending.jobId).length, before);
     db.close();
@@ -354,26 +529,32 @@ test('audit insertion failure rolls back the enclosing state mutation', () => {
   });
 });
 
-test('corrupt bytes and unknown schema fail closed without overwriting relay state', () => {
+test('actual corrupt database bytes and unknown schema fail closed without overwriting relay state', () => {
   const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
   const corrupt = join(directory, 'corrupt.sqlite');
   const unknown = join(directory, 'unknown.sqlite');
   try {
-    const corruptDb = new DatabaseSync(corrupt);
-    corruptDb.exec('CREATE TABLE x(value TEXT); INSERT INTO x VALUES (\'unchanged\');');
-    corruptDb.close();
-    assert.throws(() => openRelayStore(corrupt, 'resume'));
-    const raw = new DatabaseSync(corrupt);
-    assert.equal(raw.prepare('SELECT value FROM x').get()?.value, 'unchanged');
-    raw.close();
+    const corruptBytes = Buffer.from([
+      0x46, 0x69, 0x65, 0x6c, 0x64, 0x20, 0x52, 0x65, 0x6c, 0x61, 0x79, 0x00, 0xff,
+    ]);
+    writeFileSync(corrupt, corruptBytes);
+    assert.throws(() => openRelayStore(corrupt, 'resume'), /database|malformed/i);
+    assert.deepEqual(readFileSync(corrupt), corruptBytes);
     const unknownDb = new DatabaseSync(unknown);
-    unknownDb.exec("CREATE TABLE metadata(name TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO metadata VALUES ('schemaVersion', '99');");
+    unknownDb.exec(
+      "CREATE TABLE metadata(name TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO metadata VALUES ('schemaVersion', '99');",
+    );
     unknownDb.close();
     assert.throws(() => openRelayStore(unknown, 'resume'), /unknown schema/i);
     const verify = new DatabaseSync(unknown);
-    assert.equal(verify.prepare("SELECT value FROM metadata WHERE name='schemaVersion'").get()?.value, '99');
+    assert.equal(
+      verify.prepare("SELECT value FROM metadata WHERE name='schemaVersion'").get()?.value,
+      '99',
+    );
     verify.close();
-  } finally { rmSync(directory, { recursive: true, force: true }); }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('transaction lock fails within the configured busy bound without partial mutation', () => {
@@ -400,7 +581,8 @@ test('separate connections preserve admission ordering and monotonic attempts/au
     const second = openRelayStore(path, 'resume');
     second.enqueue({ ...order, quantity: 4 }, 'fixture-store', 1_001);
     assert.equal(first.reservePost(approved.jobId, 'first', 1_002).kind, 'blocked');
-    first.close(); second.close();
+    first.close();
+    second.close();
     first = openRelayStore(path, 'resume');
     const clean = first.enqueue({ ...order, orderId: '0008' }, 'fixture-store', 2_000);
     first.approve(clean.jobId, clean.approvalRevision, 2_000);
@@ -411,8 +593,195 @@ test('separate connections preserve admission ordering and monotonic attempts/au
     assert.equal(first.snapshot(clean.jobId).order.quantity, 3);
     assert.equal(first.reservePost(clean.jobId, 'second', 2_003).kind, 'blocked');
     const events = first.events(clean.jobId);
-    assert.deepEqual(events.map((event) => event.sequence), [...events.map((event) => event.sequence)].sort((a, b) => a - b));
+    assert.deepEqual(
+      events.map((event) => event.sequence),
+      [...events.map((event) => event.sequence)].sort((a, b) => a - b),
+    );
     assert.equal(admission.attempt, 1);
-    competitor.close(); first.close();
+    competitor.close();
+    first.close();
   });
+});
+
+test('process termination between RelayStore state and audit writes leaves both unchanged', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
+  const path = join(directory, 'relay.sqlite');
+  let child: OwnedChild | undefined;
+  try {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    store.close();
+
+    child = startHarness('abort-approval', path, pending.jobId);
+    const barrier = await waitForHarness(child, 'barrier', 'before-audit-insert');
+    assert.equal(barrier.operation, 'before-audit-insert');
+    assert.equal(child.child.kill('SIGKILL'), true);
+    const exited = await waitForExit(child, 'approval transaction barrier');
+    assert.equal(exited.signal, 'SIGKILL');
+
+    const recovered = openRelayStore(path, 'resume');
+    try {
+      const snapshot = recovered.snapshot(pending.jobId);
+      assert.equal(snapshot.approvalState, 'pending');
+      assert.equal(snapshot.approvalRevision, pending.approvalRevision);
+      assert.deepEqual(
+        recovered.events(pending.jobId).map((event) => event.kind),
+        ['enqueued'],
+      );
+    } finally {
+      recovered.close();
+    }
+  } finally {
+    if (child) await terminateOwnedChild(child, 'approval transaction cleanup');
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('two real worker processes commit a conflict before admission and block the reservation', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
+  const path = join(directory, 'relay.sqlite');
+  let reserver: OwnedChild | undefined;
+  let conflicter: OwnedChild | undefined;
+  try {
+    const approved = createApprovedJob(path, 1_000);
+    reserver = startHarness('worker', path, approved.jobId);
+    conflicter = startHarness('worker', path, approved.jobId);
+    await waitForHarness(reserver, 'ready', 'worker');
+    await waitForHarness(conflicter, 'ready', 'worker');
+
+    sendHarnessCommand(conflicter, 'conflict', 1_001);
+    const conflict = asObject((await waitForHarness(conflicter, 'result', 'conflict')).result);
+    assert.equal(conflict.holdReason, 'content_conflict');
+    assert.deepEqual(conflict.order, order);
+
+    sendHarnessCommand(reserver, 'reserve', 1_002);
+    assert.deepEqual((await waitForHarness(reserver, 'result', 'reserve')).result, {
+      kind: 'blocked',
+      reason: 'content_conflict',
+    });
+
+    const recovered = openRelayStore(path, 'resume');
+    try {
+      const snapshot = recovered.snapshot(approved.jobId);
+      assert.equal(snapshot.postReservations, 0);
+      assert.equal(snapshot.holdReason, 'content_conflict');
+      assert.deepEqual(snapshot.order, order);
+    } finally {
+      recovered.close();
+    }
+    await closeWorker(reserver, 'pre-admission reserver');
+    await closeWorker(conflicter, 'pre-admission conflicter');
+  } finally {
+    if (reserver) await terminateOwnedChild(reserver, 'pre-admission reserver cleanup');
+    if (conflicter) await terminateOwnedChild(conflicter, 'pre-admission conflicter cleanup');
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('two real worker processes preserve the admitted body after conflict and block future writes', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
+  const path = join(directory, 'relay.sqlite');
+  let reserver: OwnedChild | undefined;
+  let conflicter: OwnedChild | undefined;
+  try {
+    const approved = createApprovedJob(path, 1_000);
+    reserver = startHarness('worker', path, approved.jobId);
+    conflicter = startHarness('worker', path, approved.jobId);
+    await waitForHarness(reserver, 'ready', 'worker');
+    await waitForHarness(conflicter, 'ready', 'worker');
+
+    sendHarnessCommand(reserver, 'reserve', 1_001);
+    const admission = asObject((await waitForHarness(reserver, 'result', 'reserve')).result);
+    assert.equal(admission.kind, 'admitted');
+    assert.equal(admission.attempt, 1);
+    assert.deepEqual(admission.order, order);
+
+    sendHarnessCommand(conflicter, 'conflict', 1_002);
+    const conflict = asObject((await waitForHarness(conflicter, 'result', 'conflict')).result);
+    assert.equal(conflict.holdReason, 'content_conflict');
+    assert.deepEqual(conflict.order, order);
+
+    sendHarnessCommand(reserver, 'settle', 1_003);
+    assert.equal(
+      asObject((await waitForHarness(reserver, 'result', 'settle')).result).holdReason,
+      'content_conflict',
+    );
+    sendHarnessCommand(conflicter, 'reserve', 1_004);
+    assert.deepEqual((await waitForHarness(conflicter, 'result', 'reserve')).result, {
+      kind: 'blocked',
+      reason: 'content_conflict',
+    });
+
+    const recovered = openRelayStore(path, 'resume');
+    try {
+      const snapshot = recovered.snapshot(approved.jobId);
+      assert.equal(snapshot.postReservations, 1);
+      assert.equal(snapshot.holdReason, 'content_conflict');
+      assert.deepEqual(snapshot.order, order);
+    } finally {
+      recovered.close();
+    }
+    await closeWorker(reserver, 'post-admission reserver');
+    await closeWorker(conflicter, 'post-admission conflicter');
+  } finally {
+    if (reserver) await terminateOwnedChild(reserver, 'post-admission reserver cleanup');
+    if (conflicter) await terminateOwnedChild(conflicter, 'post-admission conflicter cleanup');
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('competing resumed workers keep multiple reservation and audit IDs strictly monotonic', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
+  const path = join(directory, 'relay.sqlite');
+  let first: OwnedChild | undefined;
+  let second: OwnedChild | undefined;
+  try {
+    const approved = createApprovedJob(path, 1_000);
+    first = startHarness('worker', path, approved.jobId);
+    second = startHarness('worker', path, approved.jobId);
+    await waitForHarness(first, 'ready', 'worker');
+    await waitForHarness(second, 'ready', 'worker');
+
+    sendHarnessCommand(first, 'reserve', 1_001);
+    const firstAdmission = asObject((await waitForHarness(first, 'result', 'reserve')).result);
+    assert.equal(firstAdmission.kind, 'admitted');
+    assert.equal(firstAdmission.attempt, 1);
+
+    sendHarnessCommand(second, 'reserve', 1_002);
+    assert.deepEqual((await waitForHarness(second, 'result', 'reserve')).result, {
+      kind: 'blocked',
+      reason: 'leased',
+    });
+
+    sendHarnessCommand(first, 'settle', 1_003);
+    await waitForHarness(first, 'result', 'settle');
+    sendHarnessCommand(second, 'reserve', 1_004);
+    const secondAdmission = asObject((await waitForHarness(second, 'result', 'reserve')).result);
+    assert.equal(secondAdmission.kind, 'admitted');
+    assert.equal(secondAdmission.attempt, 2);
+    sendHarnessCommand(second, 'settle', 1_005);
+    await waitForHarness(second, 'result', 'settle');
+
+    await closeWorker(first, 'first monotonic worker');
+    await closeWorker(second, 'second monotonic worker');
+    const recovered = openRelayStore(path, 'resume');
+    try {
+      const events = recovered.events(approved.jobId);
+      const attempts = events
+        .filter((event) => event.kind === 'post_reserved')
+        .map((event) => event.attempt);
+      assert.deepEqual(attempts, [1, 2]);
+      assert.ok(events.length > 1);
+      for (let index = 1; index < events.length; index += 1) {
+        assert.ok(events[index]!.sequence > events[index - 1]!.sequence);
+      }
+      assert.equal(recovered.snapshot(approved.jobId).postReservations, 2);
+    } finally {
+      recovered.close();
+    }
+  } finally {
+    if (first) await terminateOwnedChild(first, 'first monotonic worker cleanup');
+    if (second) await terminateOwnedChild(second, 'second monotonic worker cleanup');
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
