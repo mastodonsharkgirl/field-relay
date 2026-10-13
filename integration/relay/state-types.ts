@@ -14,7 +14,7 @@ export type HoldReason =
   | 'authorization_revoked'
   | 'recovery_readback_required'
   | 'clock_regression';
-export type BlockReason = HoldReason | 'leased' | 'not_due' | 'unknown_job';
+export type BlockReason = HoldReason | 'leased' | 'not_due' | 'outcome_finalized' | 'unknown_job';
 export type Outcome = 'pending' | 'retryable' | 'permanent_failure' | 'delivered' | 'unknown';
 
 export type JobSnapshot = {

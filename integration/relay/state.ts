@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
-import { identify, parseReceipt, validateOrder, type Order, type OrderIdentity } from './contract.ts';
+import { identify, parseReceipt, validateOrder, type Order, type OrderIdentity, type VendorReceipt } from './contract.ts';
 import type {
   Admission,
   ApprovalState,
@@ -17,7 +17,7 @@ import type {
   RelayStore,
 } from './state-types.ts';
 
-const SCHEMA_VERSION = '1';
+const SCHEMA_VERSION = '2';
 const APPROVAL_MS = 600_000;
 const LEASE_MS = 5_000;
 const RECOVERY_MS = 30_000;
@@ -46,7 +46,7 @@ class SqliteRelayStore implements RelayStore {
       CREATE TABLE metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE jobs (
         job_id TEXT PRIMARY KEY, business_key TEXT NOT NULL UNIQUE, canonical TEXT NOT NULL,
-        payload_digest TEXT NOT NULL, idempotency_key TEXT NOT NULL, order_json TEXT NOT NULL,
+        payload_digest TEXT NOT NULL, idempotency_key TEXT NOT NULL UNIQUE, order_json TEXT NOT NULL,
         vendor_store_id TEXT NOT NULL, approval_revision INTEGER NOT NULL, approval_state TEXT NOT NULL,
         approval_expires_at INTEGER, hold_reason TEXT, post_reservations INTEGER NOT NULL,
         get_reservations INTEGER NOT NULL, first_admission_at INTEGER, deadline_at INTEGER,
@@ -87,6 +87,15 @@ class SqliteRelayStore implements RelayStore {
     const row = this.#db.prepare('SELECT * FROM jobs WHERE job_id = ?').get(jobId) as Row | undefined;
     if (!row) throw Error('unknown relay job');
     return row;
+  }
+
+  #immutableReceipt(receipt: VendorReceipt) {
+    return {
+      schemaVersion: receipt.schemaVersion, vendorOrderId: receipt.vendorOrderId,
+      idempotencyKey: receipt.idempotencyKey, businessKey: receipt.businessKey,
+      payloadDigest: receipt.payloadDigest, order: receipt.order,
+      committedAt: receipt.committedAt, storeId: receipt.storeId,
+    };
   }
 
   #snapshot(row: Row): JobSnapshot {
@@ -181,6 +190,7 @@ class SqliteRelayStore implements RelayStore {
         return { kind: 'blocked', reason: 'recovery_readback_required' };
       }
       if (row.lease_id !== null) return { kind: 'blocked', reason: 'leased' };
+      if (String(row.observed) === 'present' || String(row.outcome) === 'delivered') return { kind: 'blocked', reason: 'outcome_finalized' };
       const hold = nullableString(row.hold_reason) as HoldReason | null;
       if (hold) return { kind: 'blocked', reason: hold };
       if (String(row.approval_state) !== 'approved') return { kind: 'blocked', reason: String(row.approval_state) === 'revoked' ? 'authorization_revoked' : 'authorization_required' };
@@ -201,6 +211,9 @@ class SqliteRelayStore implements RelayStore {
   reserveRead(jobId: string, now: number): ReadReservation | Blocked {
     return this.#transaction(() => {
       const row = this.#row(jobId);
+      if (this.#clockHold(row, now)) return { kind: 'blocked', reason: 'clock_regression' };
+      if (row.deadline_at !== null && asNumber(row.deadline_at) <= now) return { kind: 'blocked', reason: 'deadline_expired' };
+      if (row.next_attempt_at !== null && asNumber(row.next_attempt_at) > now) return { kind: 'blocked', reason: 'not_due', nextAttemptAt: asNumber(row.next_attempt_at) };
       if (asNumber(row.get_reservations) >= MAX_READS) return { kind: 'blocked', reason: 'read_budget_exhausted' };
       const attempt = asNumber(row.get_reservations) + 1;
       const requestId = randomUUID();
@@ -221,14 +234,18 @@ class SqliteRelayStore implements RelayStore {
       const receipt = parseReceipt(observation.receipt, order, String(row.vendor_store_id));
       if (row.receipt_json !== null) {
         const existing = parseReceipt(JSON.parse(String(row.receipt_json)), order, String(row.vendor_store_id));
-        receiptConflict = existing.vendorOrderId !== receipt.vendorOrderId;
+        receiptConflict = JSON.stringify(this.#immutableReceipt(existing)) !== JSON.stringify(this.#immutableReceipt(receipt));
       }
       if (!receiptConflict) receiptJson = JSON.stringify(receipt);
       observed = 'present';
     }
     if (String(row.observed) === 'present' && observed !== 'present') observed = 'present';
-    this.#db.prepare(`UPDATE jobs SET observed = ?, receipt_json = COALESCE(?, receipt_json), hold_reason = CASE WHEN ? THEN 'integrity_failure' ELSE hold_reason END, next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(observed, receiptJson, receiptConflict ? 1 : 0, observation.nextAttemptAt, now, now, jobId);
-    this.#event(jobId, kind, now, { observed, httpStatus: observation.httpStatus, nextAttemptAt: observation.nextAttemptAt, reason: receiptConflict ? 'integrity_failure' : observation.kind === 'unknown' ? observation.reason : null, vendorOrderId: observation.kind === 'present' ? observation.receipt.vendorOrderId : null });
+    const currentDue = nullableNumber(row.next_attempt_at);
+    const nextAttemptAt = kind === 'operator_inspection' && currentDue !== null
+      ? Math.max(currentDue, observation.nextAttemptAt ?? currentDue)
+      : observation.nextAttemptAt;
+    this.#db.prepare(`UPDATE jobs SET observed = ?, receipt_json = COALESCE(?, receipt_json), hold_reason = CASE WHEN ? THEN 'integrity_failure' ELSE hold_reason END, next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(observed, receiptJson, receiptConflict ? 1 : 0, nextAttemptAt, now, now, jobId);
+    this.#event(jobId, kind, now, { observed, httpStatus: observation.httpStatus, nextAttemptAt, reason: receiptConflict ? 'integrity_failure' : observation.kind === 'unknown' ? observation.reason : null, vendorOrderId: observation.kind === 'present' ? observation.receipt.vendorOrderId : null });
     return this.#snapshot(this.#row(jobId));
   }
 
@@ -242,11 +259,18 @@ class SqliteRelayStore implements RelayStore {
   }
 
   settle(admission: Admission, result: AttemptResult, now: number): JobSnapshot {
-    return this.#transaction(() => {
+    let expired = false;
+    const snapshot = this.#transaction(() => {
       const row = this.#row(admission.jobId);
       // The lease token fences workers. A later revocation deliberately changes the
       // approval revision but cannot erase an attempt whose admission already committed.
       if (row.lease_id !== admission.leaseId || asNumber(row.post_reservations) !== admission.attempt) throw Error('stale admission cannot settle');
+      if (asNumber(row.lease_expires_at) <= now) {
+        this.#db.prepare(`UPDATE jobs SET lease_id = NULL, lease_expires_at = NULL, hold_reason = 'recovery_readback_required', last_observed_at = ? WHERE job_id = ?`).run(now, admission.jobId);
+        this.#event(admission.jobId, 'lease_expired', now, { attempt: admission.attempt, reason: 'recovery_readback_required' });
+        expired = true;
+        return this.#snapshot(this.#row(admission.jobId));
+      }
       let receiptJson: string | null = null;
       let observed: JobSnapshot['observed'] = String(row.observed) as JobSnapshot['observed'];
       if (result.receipt) {
@@ -258,6 +282,8 @@ class SqliteRelayStore implements RelayStore {
       this.#event(admission.jobId, 'post_settled', now, { attempt: admission.attempt, outcome: result.classification, httpStatus: result.httpStatus, nextAttemptAt: result.nextAttemptAt, observed, vendorOrderId: result.receipt?.vendorOrderId ?? null });
       return this.#snapshot(this.#row(admission.jobId));
     });
+    if (expired) throw Error('admission lease expired; readback is required');
+    return snapshot;
   }
 
   hold(jobId: string, reason: HoldReason, now: number): JobSnapshot {

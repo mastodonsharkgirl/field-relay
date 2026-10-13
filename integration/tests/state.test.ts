@@ -24,7 +24,7 @@ const withStore = (run: (path: string) => void) => {
   try {
     run(path);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    try { rmSync(directory, { recursive: true, force: true }); } catch { /* an assertion may have left SQLite open */ }
   }
 };
 
@@ -42,7 +42,7 @@ const retry = (nextAttemptAt: number | null): AttemptResult => ({
   receipt: null,
 });
 
-const present = (vendorOrderId: string): ReadObservation => {
+const present = (vendorOrderId: string, committedAt = '2026-10-13T00:00:00.000Z'): ReadObservation => {
   const identity = identify(order);
   return {
   kind: 'present',
@@ -53,7 +53,7 @@ const present = (vendorOrderId: string): ReadObservation => {
     businessKey: identity.businessKey,
     payloadDigest: identity.payloadDigest,
     order,
-    committedAt: '2026-10-13T00:00:00.000Z',
+    committedAt,
     storeId: 'fixture-store',
   },
   httpStatus: 200,
@@ -143,10 +143,10 @@ test('post and read budgets persist through restart, reapproval, and identical e
       job = store.settle(claim, retry(1_101 + attempt * 100), 1_100 + attempt * 100);
     }
     for (let attempt = 0; attempt < 6; attempt += 1) {
-      const read = store.reserveRead(job.jobId, 2_000 + attempt);
-      assert.equal(read.kind, 'read_reserved');
+      const read = store.reserveRead(job.jobId, 2_200 + attempt);
+      assert.equal(read.kind, 'read_reserved', JSON.stringify(read));
       if (read.kind !== 'read_reserved') throw Error('expected read reservation');
-      job = store.settleRead(read, unknown(2_100 + attempt), 2_000 + attempt);
+      job = store.settleRead(read, unknown(), 2_200 + attempt);
     }
     store.close();
     store = openRelayStore(path, 'resume');
@@ -233,4 +233,62 @@ test('a later readback cannot replace a verified immutable receipt', () => {
     store.close();
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('a direct late worker settlement expires its lease and commits a readback hold', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+    const claim = store.reservePost(approved.jobId, 'worker', 1_001);
+    if (claim.kind !== 'admitted') throw Error('expected admission');
+    assert.throws(() => store.settle(claim, retry(7_000), 6_001), /lease expired/i);
+    assert.equal(store.snapshot(claim.jobId).holdReason, 'recovery_readback_required');
+    assert.equal(store.events(claim.jobId).at(-1)?.kind, 'lease_expired');
+    store.close();
+  });
+});
+
+test('automatic reads respect due time, deadline, and clock regression before spending a slot', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+    const claim = store.reservePost(approved.jobId, 'worker', 1_001);
+    if (claim.kind !== 'admitted') throw Error('expected admission');
+    store.settle(claim, retry(2_000), 1_002);
+    assert.equal(store.reserveRead(approved.jobId, 1_003).kind, 'blocked');
+    assert.equal(store.snapshot(approved.jobId).getReservations, 0);
+    assert.equal(store.reserveRead(approved.jobId, 900).kind, 'blocked');
+    assert.equal(store.snapshot(approved.jobId).holdReason, 'clock_regression');
+    assert.equal(store.recordInspection(approved.jobId, unknown(), 901).observed, 'unknown');
+    store.close();
+  });
+});
+
+test('operator inspection cannot clear a scheduled retry or enable a verified job to post', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const pending = store.enqueue(order, 'fixture-store', 1_000);
+    const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+    const claim = store.reservePost(approved.jobId, 'worker', 1_001);
+    if (claim.kind !== 'admitted') throw Error('expected admission');
+    store.settle(claim, retry(5_000), 1_002);
+    assert.equal(store.recordInspection(approved.jobId, unknown(null), 1_003).nextAttemptAt, 5_000);
+    store.recordInspection(approved.jobId, present('vendor-1'), 1_004);
+    assert.equal(store.reservePost(approved.jobId, 'worker', 5_000).kind, 'blocked');
+    store.close();
+  });
+});
+
+test('a same-ID receipt with a changed immutable timestamp is held and the first receipt remains', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const job = store.enqueue(order, 'fixture-store', 1_000);
+    store.recordInspection(job.jobId, present('vendor-1'), 1_001);
+    const snapshot = store.recordInspection(job.jobId, present('vendor-1', '2026-10-13T00:00:01.000Z'), 1_002);
+    assert.equal(snapshot.receipt?.committedAt, '2026-10-13T00:00:00.000Z');
+    assert.equal(snapshot.holdReason, 'integrity_failure');
+    store.close();
+  });
 });
