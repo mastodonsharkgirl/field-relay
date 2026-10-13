@@ -1,0 +1,71 @@
+# Field Relay: local portfolio integration handoff
+
+Date: 13 October 2026, Asia/Calcutta.
+
+Status: architectural design prepared for owner review; mock HTTP implementation pending.
+
+This handoff belongs to Field Relay. It is a source-backed input for a future portfolio editor; it does not authorize or perform edits to `saran-info`, `anthropic-saran-info`, their host copies or shared career evidence.
+
+## What exists today
+
+Field Relay's main product compares two CSV exports locally in the browser, keeps exact source evidence, and exports a manual review pack. A separate fictional delivery simulator demonstrates approval, conflict holds, outage retry and replay prevention in memory. Neither workflow sends an order to a vendor.
+
+Read [the domain brief](DOMAIN_BRIEF.md), [the current case study](CASE_STUDY.md), and [the fresh baseline record](evidence/2026-10-13-integration-design/BASELINE.md). Source baseline is `a55564c6f4b0872c8c78c211c8b84fafccf73d64`.
+
+## Proposed addition
+
+[The integration design](superpowers/specs/2026-10-13-mock-http-integration-design.md) proposes an independently launched local exercise: reuse TypeScript intake rules, send fictional orders to a Python mock vendor over authenticated loopback HTTP, persist relay and vendor state separately in SQLite, and evaluate replay, conflicts, timeouts, rate limits, crashes and approval revocation. Actual vendor readback determines the result.
+
+It has no model calls or live vendor account. It demonstrates integration safety reasoning, not Claude usage, model-quality evaluation, customer adoption or production operation. Python implementation, durable transport and adversarial tests remain proposed until built and run.
+
+## Status ledger
+
+| Category                          | State as of this handoff                                    |
+| --------------------------------- | ----------------------------------------------------------- |
+| Existing browser product          | Built in prior source commits; inspected today              |
+| Existing tests                    | Fresh full QA: 15 unit tests and 20 browser tests passed    |
+| New design                        | Written locally, pending owner review                       |
+| New implementation plan           | Not yet written; follows written-spec approval              |
+| Mock HTTP transport / persistence | Not implemented                                             |
+| New adversarial integration tests | Specified, not implemented or executed                      |
+| New failure walkthrough           | Scripted in the design, not demonstrated                    |
+| New integration measurements      | None                                                        |
+| Source/deployment publication     | No push, CI dispatch, deployment or domain change performed |
+| Real vendor integration           | None                                                        |
+| Paid or cloud calls               | None                                                        |
+
+Do not copy old or proposed test counts into a new passing-test claim. Do not label this package as a completed integration case while only the design is available.
+
+## Suggested portfolio wording at this stage
+
+“Field Relay compares two CSV exports in the browser and keeps row-level evidence for review. Its separate delivery lab simulates approval, retries and replay prevention. A further local mock-vendor integration exercise is designed but not yet implemented.”
+
+After implementation, replace the final sentence only when source, test log and mock-vendor readback are available. A defensible future description could say that a local synthetic integration was tested against named failure scenarios, followed by the actual measured counts. Do not insert numbers in anticipation of those results.
+
+## Explanation the owner should be able to defend
+
+- An HTTP timeout means “I did not receive the answer,” not “the vendor did nothing.”
+- Idempotency means repeated attempts preserve one intended order under a documented vendor contract.
+- The original approved payload remains fixed. A changed payload under the same order ID becomes an investigation, not a silent replacement.
+- A log records what the relay believed. Readback shows what the vendor actually stored.
+- Approval must be checked again before each new attempt. Revocation after admission can still race with an in-flight request.
+- SQLite is a deliberate local teaching and test choice. Enterprise hosting, identity, tenant isolation, backups and vendor-specific guarantees still need design and evidence.
+
+These points help show enterprise integration judgment. They do not establish 10+ years of technical customer-facing experience; the supported profile remains 8+ years overall.
+
+## Proposed control-plane note, not applied
+
+The shared `domains.yaml` entry relates to Field Relay through the Jugaad host. Because this chat owns Field Relay only, leave that shared registry and host unchanged. A future authorized maintainer may add a dated note with:
+
+- Scope: Field Relay standalone local integration design.
+- State: spec awaiting review; no mock HTTP implementation or deployment.
+- Source baseline: `a55564c6f4b0872c8c78c211c8b84fafccf73d64`.
+- Fresh verification: existing source QA, 15 unit / 20 browser; zero new integration tests executed.
+- Evidence: this repository's design and baseline record.
+- Publication: local documents only; public host unchanged by this work.
+
+No existing release counts or custom-domain states should be rewritten based on this local preparation.
+
+## Required next handoff evidence
+
+Before promoting the proposed exercise to “built,” retain approved design and plan, implementation source SHA, exact local launch instructions, integration test results with failures/skips visible, sanitized vendor readback, measured retry/admission timelines, independent review findings and their disposition, and updated local boundary documentation. Preserve explicit differences between local verification, committed code, pushed code, CI, preview deployment and a real customer rollout.
