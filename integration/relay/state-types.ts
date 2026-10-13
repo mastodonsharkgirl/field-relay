@@ -13,7 +13,8 @@ export type HoldReason =
   | 'authorization_expired'
   | 'authorization_revoked'
   | 'recovery_readback_required'
-  | 'clock_regression';
+  | 'clock_regression'
+  | 'deferred_outside_deadline';
 export type BlockReason = HoldReason | 'leased' | 'not_due' | 'outcome_finalized' | 'unknown_job';
 export type Outcome = 'pending' | 'retryable' | 'permanent_failure' | 'delivered' | 'unknown';
 
@@ -60,7 +61,7 @@ export type ReadReservation = {
   reservedAt: number;
 };
 
-export type ReadObservation =
+export type ReadObservation = (
   | { kind: 'present'; receipt: VendorReceipt; httpStatus: number | null; nextAttemptAt: number | null }
   | { kind: 'absent'; httpStatus: number | null; nextAttemptAt: number | null }
   | {
@@ -68,13 +69,15 @@ export type ReadObservation =
       reason: 'network_failure' | 'protocol_failure' | 'vendor_unavailable' | 'readback_mismatch';
       httpStatus: number | null;
       nextAttemptAt: number | null;
-    };
+    }
+) & { holdReason?: 'deferred_outside_deadline' };
 
 export type AttemptResult = {
   classification: 'retryable' | 'permanent_failure' | 'delivered' | 'unknown';
   httpStatus: number | null;
   nextAttemptAt: number | null;
   receipt: VendorReceipt | null;
+  holdReason?: 'deferred_outside_deadline';
 };
 
 export type AuditEvent = {

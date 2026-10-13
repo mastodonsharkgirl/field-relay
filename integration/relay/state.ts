@@ -216,6 +216,9 @@ class SqliteRelayStore implements RelayStore {
   reserveRead(jobId: string, now: number): ReadReservation | Blocked {
     return this.#transaction(() => {
       const row = this.#row(jobId);
+      if (nullableString(row.hold_reason) === 'deferred_outside_deadline') {
+        return { kind: 'blocked', reason: 'deferred_outside_deadline' };
+      }
       if (this.#clockHold(row, now)) return { kind: 'blocked', reason: 'clock_regression' };
       if (row.deadline_at !== null && asNumber(row.deadline_at) <= now) return { kind: 'blocked', reason: 'deadline_expired' };
       if (row.next_attempt_at !== null && asNumber(row.next_attempt_at) > now) return { kind: 'blocked', reason: 'not_due', nextAttemptAt: asNumber(row.next_attempt_at) };
@@ -249,8 +252,13 @@ class SqliteRelayStore implements RelayStore {
     const nextAttemptAt = kind === 'operator_inspection' && currentDue !== null
       ? Math.max(currentDue, observation.nextAttemptAt ?? currentDue)
       : observation.nextAttemptAt;
-    this.#db.prepare(`UPDATE jobs SET observed = ?, receipt_json = COALESCE(?, receipt_json), hold_reason = CASE WHEN ? THEN 'integrity_failure' ELSE hold_reason END, next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(observed, receiptJson, receiptConflict ? 1 : 0, nextAttemptAt, now, now, jobId);
-    this.#event(jobId, kind, now, { observed, httpStatus: observation.httpStatus, nextAttemptAt, reason: receiptConflict ? 'integrity_failure' : observation.kind === 'unknown' ? observation.reason : null, vendorOrderId: observation.kind === 'present' ? observation.receipt.vendorOrderId : null });
+    const clearsRecoveryHold = kind === 'read_settled' && observation.kind === 'absent' && row.hold_reason === 'recovery_readback_required';
+    const holdReason = observation.holdReason ?? null;
+    const outcome: Outcome = kind === 'read_settled' && observation.kind === 'present' && !receiptConflict
+      ? 'delivered'
+      : (String(row.outcome) as Outcome);
+    this.#db.prepare(`UPDATE jobs SET observed = ?, receipt_json = COALESCE(?, receipt_json), hold_reason = CASE WHEN ? THEN 'integrity_failure' WHEN ? IS NOT NULL THEN ? WHEN ? THEN NULL ELSE hold_reason END, outcome = ?, next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(observed, receiptJson, receiptConflict ? 1 : 0, holdReason, holdReason, clearsRecoveryHold ? 1 : 0, outcome, nextAttemptAt, now, now, jobId);
+    this.#event(jobId, kind, now, { outcome, observed, httpStatus: observation.httpStatus, nextAttemptAt, reason: receiptConflict ? 'integrity_failure' : holdReason ?? (observation.kind === 'unknown' ? observation.reason : null), vendorOrderId: observation.kind === 'present' ? observation.receipt.vendorOrderId : null });
     return this.#snapshot(this.#row(jobId));
   }
 
@@ -277,7 +285,7 @@ class SqliteRelayStore implements RelayStore {
         return this.#snapshot(this.#row(admission.jobId));
       }
       let receiptJson: string | null = null;
-      let observed: JobSnapshot['observed'] = String(row.observed) as JobSnapshot['observed'];
+      let observed: JobSnapshot['observed'] = 'unknown';
       if (result.receipt) {
         const receipt = parseReceipt(result.receipt, validateOrder(JSON.parse(String(row.order_json))), String(row.vendor_store_id));
         if (row.receipt_json !== null) {
@@ -290,9 +298,9 @@ class SqliteRelayStore implements RelayStore {
         } else receiptJson = JSON.stringify(receipt);
         observed = 'present';
       }
-      this.#db.prepare(`UPDATE jobs SET lease_id = NULL, lease_expires_at = NULL, outcome = ?, observed = ?, receipt_json = COALESCE(?, receipt_json), next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(result.classification, observed, receiptJson, result.nextAttemptAt, now, now, admission.jobId);
+      this.#db.prepare(`UPDATE jobs SET lease_id = NULL, lease_expires_at = NULL, outcome = ?, observed = ?, receipt_json = COALESCE(?, receipt_json), hold_reason = CASE WHEN ? IS NULL THEN hold_reason ELSE ? END, next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(result.classification, observed, receiptJson, result.holdReason ?? null, result.holdReason ?? null, result.nextAttemptAt, now, now, admission.jobId);
       const persisted = this.#snapshot(this.#row(admission.jobId));
-      this.#event(admission.jobId, 'post_settled', now, { attempt: admission.attempt, outcome: result.classification, httpStatus: result.httpStatus, nextAttemptAt: result.nextAttemptAt, observed, vendorOrderId: persisted.receipt?.vendorOrderId ?? null });
+      this.#event(admission.jobId, 'post_settled', now, { attempt: admission.attempt, outcome: result.classification, httpStatus: result.httpStatus, nextAttemptAt: result.nextAttemptAt, reason: result.holdReason ?? null, observed, vendorOrderId: persisted.receipt?.vendorOrderId ?? null });
       return persisted;
     });
     if (expired) throw Error('admission lease expired; readback is required');

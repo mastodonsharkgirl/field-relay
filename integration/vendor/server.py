@@ -15,7 +15,7 @@ from .store import VendorStore
 MAX_BODY = 16 * 1024
 KEY = re.compile(r'^[0-9a-f]{64}$')
 REQUEST_ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
-SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '503_once', '401', '403', '422', 'timeout_before_commit', 'timeout_after_commit', 'malformed_success', 'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'hold_after_commit', 'rollback_transaction'}
+SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '429_huge_retry_after', '503_once', '401', '403', '422', 'timeout_before_commit', 'timeout_after_commit', 'malformed_success', 'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'hold_after_commit', 'rollback_transaction', 'redirect', 'slow_body', 'oversized_response'}
 
 
 READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked'}
@@ -90,17 +90,55 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             if remaining <= 0: raise TimeoutError
             self.connection.settimeout(remaining)
 
-        def _error(self, status, code, request_id='server'):
-            self._json(status, {'schemaVersion': 1, 'code': code, 'requestId': request_id, 'message': 'Synthetic vendor request rejected.'})
+        def _error(self, status, code, request_id='server', retry_after=None):
+            headers = {'Retry-After': retry_after} if retry_after is not None else {}
+            self._json(status, {'schemaVersion': 1, 'code': code, 'requestId': request_id, 'message': 'Synthetic vendor request rejected.'}, headers)
 
-        def _json(self, status, value):
+        def _json(self, status, value, headers=None):
             body = json.dumps(value, separators=(',', ':')).encode()
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Cache-Control', 'no-store')
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _redirect(self, key):
+            self.send_response(302)
+            self.send_header('Location', '/v1/orders/' + key)
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+
+        def _slow_json(self, status, value):
+            body = json.dumps(value, separators=(',', ':')).encode()
+            split = max(1, len(body) // 2)
             self.send_response(status)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Cache-Control', 'no-store')
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body[:split])
+                self.wfile.flush()
+                time.sleep(1)
+                self.wfile.write(body[split:])
+            except (BrokenPipeError, ConnectionResetError):
+                return
+
+        def _oversized_response(self, status):
+            body = b'{"schemaVersion":1,"padding":"' + b'x' * (64 * 1024) + b'"}'
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                return
 
         def _headers_ok(self):
             names = ('Content-Length', 'Authorization', 'Idempotency-Key', 'X-Request-Id')
@@ -203,8 +241,12 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             except ValueError: self._error(422, 'invalid_order', request_id); return
             action, _ = store.consume_scenario(key, 'post')
             faults = {'429': 429, '503': 503, '401': 401, '403': 403, '422': 422}
+            if action == '429_huge_retry_after':
+                self._error(429, 'synthetic_429_huge_retry_after', request_id, '9' * 256); return
             if action in faults:
-                self._error(faults[action], 'synthetic_' + action, request_id); return
+                self._error(faults[action], 'synthetic_' + action, request_id, '1' if action == '429' else None); return
+            if action == 'redirect':
+                self._redirect(key); return
             if action == 'timeout_before_commit': time.sleep(5); return
             try:
                 status, receipt = store.create_or_replay(order, key, request_id, _rollback_for_test=action == 'rollback_transaction')
@@ -214,6 +256,10 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
                 with barrier_lock: barrier = barriers.setdefault(key, threading.Event())
                 barrier.wait(5)
             if action == 'timeout_after_commit': time.sleep(5); return
+            if action == 'slow_body':
+                self._slow_json(status, receipt); return
+            if action == 'oversized_response':
+                self._oversized_response(status); return
             if action == 'malformed_success': self._json(200, {'schemaVersion': 1}); return
             self._json(status, receipt if status < 400 else {'schemaVersion': 1, 'requestId': request_id, **receipt})
 

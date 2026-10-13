@@ -516,6 +516,93 @@ test('changed vendor store ID holds the immutable original body', () => {
   });
 });
 
+test('a deferred Retry-After holds every automatic request even with no representable due timestamp', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const admission = store.reservePost(approved.jobId, 'worker', 1_001);
+      if (admission.kind !== 'admitted') throw Error('expected admission');
+      const deferred = store.settle(
+        admission,
+        {
+          classification: 'retryable',
+          httpStatus: 429,
+          nextAttemptAt: null,
+          receipt: null,
+          holdReason: 'deferred_outside_deadline',
+        },
+        1_002,
+      );
+      assert.equal(deferred.holdReason, 'deferred_outside_deadline');
+      assert.equal(deferred.nextAttemptAt, null);
+      assert.deepEqual(store.reservePost(approved.jobId, 'worker', 1_003), {
+        kind: 'blocked',
+        reason: 'deferred_outside_deadline',
+      });
+      assert.deepEqual(store.reserveRead(approved.jobId, 1_003), {
+        kind: 'blocked',
+        reason: 'deferred_outside_deadline',
+      });
+      assert.equal(store.events(approved.jobId).at(-1)?.reason, 'deferred_outside_deadline');
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test('an automatic exact readback, rather than a POST response, promotes delivery', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const admission = store.reservePost(approved.jobId, 'worker', 1_001);
+      if (admission.kind !== 'admitted') throw Error('expected admission');
+      store.settle(
+        admission,
+        { classification: 'unknown', httpStatus: 201, nextAttemptAt: null, receipt: null },
+        1_002,
+      );
+      const read = store.reserveRead(approved.jobId, 1_003);
+      if (read.kind !== 'read_reserved') throw Error('expected automatic read');
+      const verified = store.settleRead(read, present('vendor-automatic'), 1_004);
+      assert.equal(verified.observed, 'present');
+      assert.equal(verified.outcome, 'delivered');
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test('an automatic absent readback clears only an expired-lease recovery hold before a same-key retry', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const first = store.reservePost(approved.jobId, 'worker-a', 1_001);
+      if (first.kind !== 'admitted') throw Error('expected initial admission');
+      assert.deepEqual(store.reservePost(approved.jobId, 'worker-b', 6_002), {
+        kind: 'blocked',
+        reason: 'recovery_readback_required',
+      });
+      const read = store.reserveRead(approved.jobId, 6_003);
+      if (read.kind !== 'read_reserved') throw Error('expected recovery read');
+      const absent = store.settleRead(
+        read,
+        { kind: 'absent', httpStatus: 404, nextAttemptAt: null },
+        6_004,
+      );
+      assert.equal(absent.holdReason, null);
+      assert.equal(store.reservePost(approved.jobId, 'worker-c', 6_005).kind, 'admitted');
+    } finally {
+      store.close();
+    }
+  });
+});
+
 test('audit insertion failure rolls back the enclosing state mutation', () => {
   withStore((path) => {
     const store = openRelayStore(path, 'new');

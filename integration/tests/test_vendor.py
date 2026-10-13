@@ -338,6 +338,44 @@ class VendorHttpTests(unittest.TestCase):
             if item[0] == 'malformed_success':
                 self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[2]['order'], order)
 
+    def test_transport_boundary_scenarios_are_fixed_and_observable(self):
+        rate_limited = {**ORDER, 'orderId': 'BOUNDARY-429'}
+        rate_key = identify(rate_limited)['idempotencyKey']
+        self.assertEqual(self.configure(rate_key, ['429_once'])[0], 200)
+        status, headers, _ = self.request('POST', '/v1/orders', json.dumps(rate_limited).encode(), self.token, self.order_headers(rate_limited))
+        self.assertEqual((status, headers['Retry-After']), (429, '1'))
+
+        huge_retry = {**ORDER, 'orderId': 'BOUNDARY-HUGE-RETRY'}
+        huge_retry_key = identify(huge_retry)['idempotencyKey']
+        self.assertEqual(self.configure(huge_retry_key, ['429_huge_retry_after'])[0], 200)
+        status, headers, _ = self.request('POST', '/v1/orders', json.dumps(huge_retry).encode(), self.token, self.order_headers(huge_retry))
+        self.assertEqual((status, headers['Retry-After']), (429, '9' * 256))
+
+        redirected = {**ORDER, 'orderId': 'BOUNDARY-REDIRECT'}
+        redirect_key = identify(redirected)['idempotencyKey']
+        self.assertEqual(self.configure(redirect_key, ['redirect'])[0], 200)
+        status, headers, _ = self.request('POST', '/v1/orders', json.dumps(redirected).encode(), self.token, self.order_headers(redirected))
+        self.assertEqual((status, headers['Location']), (302, '/v1/orders/' + redirect_key))
+        observed = self.request('POST', '/__lab/scenarios', json.dumps({'action': 'observe', 'idempotencyKey': redirect_key}).encode(), self.admin, {'Content-Type': 'application/json'})[2]
+        self.assertEqual(observed['requestCount'], {'post': 1, 'get': 0})
+
+        slow = {**ORDER, 'orderId': 'BOUNDARY-SLOW'}
+        slow_key = identify(slow)['idempotencyKey']
+        self.assertEqual(self.configure(slow_key, ['slow_body'])[0], 200)
+        started = time.monotonic()
+        status, _, receipt = self.request('POST', '/v1/orders', json.dumps(slow).encode(), self.token, self.order_headers(slow))
+        elapsed = time.monotonic() - started
+        self.assertEqual((status, receipt['order']), (201, slow))
+        self.assertGreaterEqual(elapsed, .9)
+        self.assertLess(elapsed, 1.6)
+
+        oversized = {**ORDER, 'orderId': 'BOUNDARY-OVERSIZE'}
+        oversized_key = identify(oversized)['idempotencyKey']
+        self.assertEqual(self.configure(oversized_key, ['oversized_response'])[0], 200)
+        status, _, response = self.request('POST', '/v1/orders', json.dumps(oversized).encode(), self.token, self.order_headers(oversized))
+        self.assertEqual(status, 201)
+        self.assertEqual(len(response['padding']), 64 * 1024)
+
     def test_http_capacity_and_independent_clients(self):
         statuses = []
         def post(order, request_id):
