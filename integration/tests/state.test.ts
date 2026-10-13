@@ -460,26 +460,32 @@ test('a same-ID receipt with a changed immutable timestamp is held and the first
 test('an admitted worker cannot replace an operator-verified receipt', () => {
   withStore((path) => {
     const store = openRelayStore(path, 'new');
-    const pending = store.enqueue(order, 'fixture-store', 1_000);
-    const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
-    const claim = store.reservePost(approved.jobId, 'worker', 1_001);
-    if (claim.kind !== 'admitted') throw Error('expected admission');
-    store.recordInspection(claim.jobId, present('operator-receipt'), 1_002);
-    const conflicting = present('worker-receipt');
-    if (conflicting.kind !== 'present') throw Error('expected present observation');
-    const snapshot = store.settle(
-      claim,
-      {
-        classification: 'delivered',
-        httpStatus: 201,
-        nextAttemptAt: null,
-        receipt: conflicting.receipt,
-      },
-      1_003,
-    );
-    assert.equal(snapshot.receipt?.vendorOrderId, 'operator-receipt');
-    assert.equal(snapshot.holdReason, 'integrity_failure');
-    store.close();
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const claim = store.reservePost(approved.jobId, 'worker', 1_001);
+      if (claim.kind !== 'admitted') throw Error('expected admission');
+      store.recordInspection(claim.jobId, present('operator-receipt'), 1_002);
+      const conflicting = present('worker-receipt');
+      if (conflicting.kind !== 'present') throw Error('expected present observation');
+      const snapshot = store.settle(
+        claim,
+        {
+          classification: 'delivered',
+          httpStatus: 201,
+          nextAttemptAt: null,
+          receipt: conflicting.receipt,
+        },
+        1_003,
+      );
+      assert.equal(snapshot.receipt?.vendorOrderId, 'operator-receipt');
+      assert.equal(snapshot.holdReason, 'integrity_failure');
+      const postSettled = store.events(claim.jobId).at(-1);
+      assert.equal(postSettled?.kind, 'post_settled');
+      assert.equal(postSettled?.vendorOrderId, 'operator-receipt');
+    } finally {
+      store.close();
+    }
   });
 });
 
@@ -646,8 +652,10 @@ test('two real worker processes commit a conflict before admission and block the
     const approved = createApprovedJob(path, 1_000);
     reserver = startHarness('worker', path, approved.jobId);
     conflicter = startHarness('worker', path, approved.jobId);
-    await waitForHarness(reserver, 'ready', 'worker');
-    await waitForHarness(conflicter, 'ready', 'worker');
+    await Promise.all([
+      waitForHarness(reserver, 'ready', 'worker'),
+      waitForHarness(conflicter, 'ready', 'worker'),
+    ]);
 
     sendHarnessCommand(conflicter, 'conflict', 1_001);
     const conflict = asObject((await waitForHarness(conflicter, 'result', 'conflict')).result);
@@ -687,8 +695,10 @@ test('two real worker processes preserve the admitted body after conflict and bl
     const approved = createApprovedJob(path, 1_000);
     reserver = startHarness('worker', path, approved.jobId);
     conflicter = startHarness('worker', path, approved.jobId);
-    await waitForHarness(reserver, 'ready', 'worker');
-    await waitForHarness(conflicter, 'ready', 'worker');
+    await Promise.all([
+      waitForHarness(reserver, 'ready', 'worker'),
+      waitForHarness(conflicter, 'ready', 'worker'),
+    ]);
 
     sendHarnessCommand(reserver, 'reserve', 1_001);
     const admission = asObject((await waitForHarness(reserver, 'result', 'reserve')).result);
@@ -739,8 +749,10 @@ test('competing resumed workers keep multiple reservation and audit IDs strictly
     const approved = createApprovedJob(path, 1_000);
     first = startHarness('worker', path, approved.jobId);
     second = startHarness('worker', path, approved.jobId);
-    await waitForHarness(first, 'ready', 'worker');
-    await waitForHarness(second, 'ready', 'worker');
+    await Promise.all([
+      waitForHarness(first, 'ready', 'worker'),
+      waitForHarness(second, 'ready', 'worker'),
+    ]);
 
     sendHarnessCommand(first, 'reserve', 1_001);
     const firstAdmission = asObject((await waitForHarness(first, 'result', 'reserve')).result);

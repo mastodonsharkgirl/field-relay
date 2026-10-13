@@ -291,8 +291,9 @@ class SqliteRelayStore implements RelayStore {
         observed = 'present';
       }
       this.#db.prepare(`UPDATE jobs SET lease_id = NULL, lease_expires_at = NULL, outcome = ?, observed = ?, receipt_json = COALESCE(?, receipt_json), next_attempt_at = ?, last_observed_at = CASE WHEN last_observed_at > ? THEN last_observed_at ELSE ? END WHERE job_id = ?`).run(result.classification, observed, receiptJson, result.nextAttemptAt, now, now, admission.jobId);
-      this.#event(admission.jobId, 'post_settled', now, { attempt: admission.attempt, outcome: result.classification, httpStatus: result.httpStatus, nextAttemptAt: result.nextAttemptAt, observed, vendorOrderId: result.receipt?.vendorOrderId ?? null });
-      return this.#snapshot(this.#row(admission.jobId));
+      const persisted = this.#snapshot(this.#row(admission.jobId));
+      this.#event(admission.jobId, 'post_settled', now, { attempt: admission.attempt, outcome: result.classification, httpStatus: result.httpStatus, nextAttemptAt: result.nextAttemptAt, observed, vendorOrderId: persisted.receipt?.vendorOrderId ?? null });
+      return persisted;
     });
     if (expired) throw Error('admission lease expired; readback is required');
     return snapshot;
