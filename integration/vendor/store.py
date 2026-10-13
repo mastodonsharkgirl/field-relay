@@ -100,7 +100,7 @@ class VendorStore:
             receipt['replayed'] = replayed
         return receipt
 
-    def create_or_replay(self, order: dict, key: str, request_id: str):
+    def create_or_replay(self, order: dict, key: str, request_id: str, *, _rollback_for_test=False):
         valid = validate_order(order)
         identity = identify(valid)
         if key != identity['idempotencyKey']:
@@ -132,6 +132,8 @@ class VendorStore:
             vendor_order_id = 'vendor-' + secrets.token_hex(12)
             connection.execute('''INSERT INTO orders(idempotency_key,business_key,canonical,payload_digest,order_json,vendor_order_id,committed_at)
                 VALUES(?,?,?,?,?,?,?)''', (key, identity['businessKey'], identity['canonical'], identity['payloadDigest'], json.dumps(valid, separators=(',', ':')), vendor_order_id, committed_at))
+            if _rollback_for_test:
+                raise RuntimeError('synthetic transaction rollback')
             connection.execute('INSERT INTO request_audit(request_id,idempotency_key,event,created_at) VALUES(?,?,?,?)', (request_id, key, 'committed', committed_at))
             row = connection.execute('''SELECT orders.*, (SELECT value FROM metadata WHERE name='storeId') store_id
                 FROM orders WHERE idempotency_key=?''', (key,)).fetchone()

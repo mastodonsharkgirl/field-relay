@@ -15,7 +15,18 @@ from .store import VendorStore
 MAX_BODY = 16 * 1024
 KEY = re.compile(r'^[0-9a-f]{64}$')
 REQUEST_ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
-SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '503_once', '401', '403', '422', 'timeout_before_commit', 'timeout_after_commit', 'malformed_success', 'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'hold_after_commit'}
+SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '503_once', '401', '403', '422', 'timeout_before_commit', 'timeout_after_commit', 'malformed_success', 'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'hold_after_commit', 'rollback_transaction'}
+
+
+def expand_scenario(sequence):
+    expanded = []
+    for action in sequence:
+        if action == '429_once': expanded.extend(('429', 'healthy'))
+        elif action == '429_twice': expanded.extend(('429', '429', 'healthy'))
+        elif action == '429_repeat': expanded.extend(('429',) * 8)
+        elif action == '503_once': expanded.extend(('503', 'healthy'))
+        else: expanded.append(action)
+    return expanded
 
 
 def create_server(store_path: Path, mode: str, token: str, admin_token: str):
@@ -82,8 +93,15 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
             if self.path == '/v1/orders': self._json(200, store.list_orders()); return
             prefix = '/v1/orders/'
             if self.path.startswith(prefix) and KEY.fullmatch(self.path[len(prefix):]):
-                receipt = store.get_order(self.path[len(prefix):])
-                if receipt: self._json(200, receipt)
+                key = self.path[len(prefix):]
+                action, _ = store.consume_scenario(key)
+                if action == 'readback_unavailable': self._error(503, 'synthetic_readback_unavailable'); return
+                if action == 'readback_blocked': self._error(423, 'synthetic_readback_blocked'); return
+                receipt = store.get_order(key)
+                if action == 'mismatched_readback' and receipt:
+                    receipt['payloadDigest'] = '0' * 64
+                    self._json(200, receipt)
+                elif receipt: self._json(200, receipt)
                 else: self._error(404, 'not_found')
                 return
             self._error(404, 'not_found')
@@ -104,7 +122,9 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
                 if action == 'configure':
                     sequence = payload.get('scenario')
                     if not isinstance(sequence, list) or not 1 <= len(sequence) <= 8 or any(item not in SCENARIOS for item in sequence): self._error(422, 'invalid_scenario'); return
-                    store.configure_scenario(key, sequence); self._json(200, store.observe_scenario(key)); return
+                    expanded = expand_scenario(sequence)
+                    if len(expanded) > 16: self._error(422, 'invalid_scenario'); return
+                    store.configure_scenario(key, expanded); self._json(200, store.observe_scenario(key)); return
                 if action == 'release':
                     barrier = barriers.get(key)
                     if barrier: barrier.set()
@@ -122,11 +142,14 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str):
             try: order = decode_order(body)
             except ValueError: self._error(422, 'invalid_order', request_id); return
             action, _ = store.consume_scenario(key)
-            faults = {'429_once': 429, '429_twice': 429, '429_repeat': 429, '503_once': 503, '401': 401, '403': 403, '422': 422}
+            faults = {'429': 429, '503': 503, '401': 401, '403': 403, '422': 422}
             if action in faults:
                 self._error(faults[action], 'synthetic_' + action, request_id); return
             if action == 'timeout_before_commit': time.sleep(5); return
-            status, receipt = store.create_or_replay(order, key, request_id)
+            try:
+                status, receipt = store.create_or_replay(order, key, request_id, _rollback_for_test=action == 'rollback_transaction')
+            except RuntimeError:
+                self._error(500, 'synthetic_transaction_rollback', request_id); return
             if action == 'hold_after_commit':
                 barrier = barriers.setdefault(key, threading.Event()); barrier.wait(5)
             if action == 'timeout_after_commit': time.sleep(5); return

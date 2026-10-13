@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import socket
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -79,6 +80,28 @@ class VendorStoreTests(unittest.TestCase):
             VendorStore(self.path, 'new')
         with self.assertRaises(ValueError):
             VendorStore(Path(self.tmp.name) / 'missing', 'resume')
+
+    def test_resume_rejects_corrupt_or_unknown_database_without_replacing_it(self):
+        from integration.vendor.store import VendorStore
+
+        corrupt = Path(self.tmp.name) / 'corrupt'
+        corrupt.mkdir()
+        corrupt_db = corrupt / 'vendor.sqlite'
+        corrupt_db.write_bytes(b'not a sqlite database')
+        with self.assertRaises(ValueError):
+            VendorStore(corrupt, 'resume')
+        self.assertEqual(corrupt_db.read_bytes(), b'not a sqlite database')
+        versioned = Path(self.tmp.name) / 'versioned'
+        store = VendorStore(versioned, 'new')
+        store.close()
+        connection = sqlite3.connect(versioned / 'vendor.sqlite')
+        try:
+            connection.execute("UPDATE metadata SET value='99' WHERE name='schemaVersion'")
+            connection.commit()
+        finally:
+            connection.close()
+        with self.assertRaises(ValueError):
+            VendorStore(versioned, 'resume')
 
     def test_concurrent_same_and_changed_payloads_create_one_order(self):
         from integration.vendor.store import VendorStore
@@ -193,6 +216,36 @@ class VendorHttpTests(unittest.TestCase):
         self.assertEqual(self.request('POST', '/__lab/scenarios', release, self.admin, {'Content-Type': 'application/json'})[0], 200)
         thread.join(2)
         self.assertEqual(result, [201])
+
+    def configure(self, key, scenario):
+        body = json.dumps({'action': 'configure', 'idempotencyKey': key, 'scenario': scenario}).encode()
+        return self.request('POST', '/__lab/scenarios', body, self.admin, {'Content-Type': 'application/json'})
+
+    def test_readback_faults_are_durable_and_do_not_mutate_the_committed_order(self):
+        key = identify(ORDER)['idempotencyKey']
+        self.assertEqual(self.configure(key, ['healthy', 'mismatched_readback', 'readback_unavailable', 'readback_blocked'])[0], 200)
+        self.assertEqual(self.request('POST', '/v1/orders', json.dumps(ORDER).encode(), self.token, self.order_headers())[0], 201)
+        mismatch = self.request('GET', '/v1/orders/' + key, token=self.token)
+        self.assertEqual(mismatch[0], 200)
+        self.assertNotEqual(mismatch[2]['payloadDigest'], identify(ORDER)['payloadDigest'])
+        self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[0], 503)
+        self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[0], 423)
+        observed = self.request('GET', '/v1/orders/' + key, token=self.token)
+        self.assertEqual((observed[0], observed[2]['order']), (200, ORDER))
+
+    def test_rollback_fault_leaves_no_order_or_phantom_audit_then_allows_retry(self):
+        key = identify(ORDER)['idempotencyKey']
+        self.assertEqual(self.configure(key, ['rollback_transaction'])[0], 200)
+        status = self.request('POST', '/v1/orders', json.dumps(ORDER).encode(), self.token, self.order_headers())[0]
+        self.assertEqual(status, 500)
+        self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[0], 404)
+        self.assertEqual(self.request('GET', '/v1/orders', token=self.token)[2]['count'], 0)
+        connection = sqlite3.connect(self.state / 'vendor.sqlite')
+        try:
+            self.assertEqual(connection.execute('SELECT COUNT(*) FROM request_audit').fetchone()[0], 0)
+        finally:
+            connection.close()
+        self.assertEqual(self.request('POST', '/v1/orders', json.dumps(ORDER).encode(), self.token, self.order_headers())[0], 201)
 
 
 if __name__ == '__main__':
