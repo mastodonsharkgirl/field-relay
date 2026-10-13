@@ -1,0 +1,6 @@
+Order ID,Region,Quantity,Amount
+0007,North,3,42.50
+0007,North,3,42.50
+N-conflict,North,1,10.00
+N-conflict,South,1,10.00
+N-bad,North,0,10.00

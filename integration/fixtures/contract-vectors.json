@@ -1,0 +1,30 @@
+[
+  {
+    "order": {
+      "schemaVersion": 1,
+      "partner": "northstar",
+      "orderId": "0007",
+      "region": "North",
+      "quantity": 3,
+      "amountMinor": 4250
+    },
+    "businessKey": "[\"northstar\",\"0007\"]",
+    "canonical": "[1,\"northstar\",\"0007\",\"North\",3,4250]",
+    "payloadDigest": "f1392e79fa3c8af1021a0550c4df83c5f7c4f23c824ceaffa7afd67cb1400937",
+    "idempotencyKey": "5756eefec8edeb8364aef29e49e7d535727b7f9e518518a0517e5d6ff8191b3b"
+  },
+  {
+    "order": {
+      "schemaVersion": 1,
+      "partner": "orbit",
+      "orderId": "O-9",
+      "region": "South",
+      "quantity": 10000,
+      "amountMinor": 99999999999
+    },
+    "businessKey": "[\"orbit\",\"O-9\"]",
+    "canonical": "[1,\"orbit\",\"O-9\",\"South\",10000,99999999999]",
+    "payloadDigest": "c95724fdfcf3d9c46291753d4039f18c7cdf8034a940db4cc043ec22aa0d73b3",
+    "idempotencyKey": "964f268052a80b062fc531a16f0859743b25ca315f5ba55c75d00c09c871ad34"
+  }
+]

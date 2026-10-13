@@ -4,3 +4,5 @@ dist
 test-results
 .worktrees/
 .superpowers/
+.local/integration/
+integration/**/__pycache__/

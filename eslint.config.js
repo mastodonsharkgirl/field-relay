@@ -12,4 +12,10 @@ export default [
     plugins: { '@typescript-eslint': tseslint },
     rules: { '@typescript-eslint/no-unused-vars': 'error' },
   },
+  {
+    files: ['integration/**/*.ts'],
+    languageOptions: {
+      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly' },
+    },
+  },
 ];
