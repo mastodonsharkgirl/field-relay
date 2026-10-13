@@ -2,7 +2,7 @@
 
 Date: 13 October 2026, Asia/Calcutta.
 
-Status: architectural design prepared for owner review; mock HTTP implementation pending.
+Status: owner approved the architectural design; the implementation plan is prepared for review and execution-method selection. Mock HTTP implementation remains pending.
 
 This handoff belongs to Field Relay. It is a source-backed input for a future portfolio editor; it does not authorize or perform edits to `saran-info`, `anthropic-saran-info`, their host copies or shared career evidence.
 
@@ -20,21 +20,23 @@ It has no model calls or live vendor account. It demonstrates integration safety
 
 ## Status ledger
 
-| Category                          | State as of this handoff                                    |
-| --------------------------------- | ----------------------------------------------------------- |
-| Existing browser product          | Built in prior source commits; inspected today              |
-| Existing tests                    | Fresh full QA: 15 unit tests and 20 browser tests passed    |
-| New design                        | Written locally, pending owner review                       |
-| New implementation plan           | Not yet written; follows written-spec approval              |
-| Mock HTTP transport / persistence | Not implemented                                             |
-| New adversarial integration tests | Specified, not implemented or executed                      |
-| New failure walkthrough           | Scripted in the design, not demonstrated                    |
-| New integration measurements      | None                                                        |
-| Source/deployment publication     | No push, CI dispatch, deployment or domain change performed |
-| Real vendor integration           | None                                                        |
-| Paid or cloud calls               | None                                                        |
+| Category                          | State as of this handoff                                                    |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| Existing browser product          | Built in prior source commits; inspected today                              |
+| Existing tests                    | Fresh full QA: 15 unit tests and 20 browser tests passed                    |
+| New design                        | Written locally and approved by the owner on 13 October 2026                |
+| New implementation plan           | Written and self-reviewed; pending owner review and execution-method choice |
+| Mock HTTP transport / persistence | Not implemented                                                             |
+| New adversarial integration tests | Specified, not implemented or executed                                      |
+| New failure walkthrough           | Scripted in the design, not demonstrated                                    |
+| New integration measurements      | None                                                                        |
+| Source/deployment publication     | No push, CI dispatch, deployment or domain change performed                 |
+| Real vendor integration           | None                                                                        |
+| Paid or cloud calls               | None                                                                        |
 
 Do not copy old or proposed test counts into a new passing-test claim. Do not label this package as a completed integration case while only the design is available.
+
+The [implementation plan](superpowers/plans/2026-10-13-mock-http-integration.md) translates the approved design into six testable tasks. Planning checked the existing configuration and identified the missing Node development types. No product code or dependency was changed and no integration test was run. The baseline QA results above remain the results of the earlier recorded run; they were not rerun during planning.
 
 ## Suggested portfolio wording at this stage
 
@@ -57,8 +59,8 @@ These points help show enterprise integration judgment. They do not establish 10
 
 The shared `domains.yaml` entry relates to Field Relay through the Jugaad host. Because this chat owns Field Relay only, leave that shared registry and host unchanged. A future authorized maintainer may add a dated note with:
 
-- Scope: Field Relay standalone local integration design.
-- State: spec awaiting review; no mock HTTP implementation or deployment.
+- Scope: Field Relay standalone local integration design and implementation plan.
+- State: spec approved; plan awaiting review and execution-method selection; no mock HTTP implementation or deployment.
 - Source baseline: `a55564c6f4b0872c8c78c211c8b84fafccf73d64`.
 - Fresh verification: existing source QA, 15 unit / 20 browser; zero new integration tests executed.
 - Evidence: this repository's design and baseline record.

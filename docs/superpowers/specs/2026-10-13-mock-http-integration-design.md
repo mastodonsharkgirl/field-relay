@@ -2,7 +2,7 @@
 
 Date: 13 October 2026 (Asia/Calcutta)
 
-Status: written design for owner review; implementation has not started.
+Status: owner approved the written design on 13 October 2026 with “go ahead, use @Superpowers.” The [implementation plan](../plans/2026-10-13-mock-http-integration.md) is prepared for review; implementation has not started.
 
 Source baseline: `a55564c6f4b0872c8c78c211c8b84fafccf73d64`.
 
