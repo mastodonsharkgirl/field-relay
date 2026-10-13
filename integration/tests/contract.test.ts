@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import { identify, parseReceipt, validateOrder } from '../relay/contract.ts';
-import { loadFixture } from '../relay/intake.ts';
+import { assertFixtureHasOrders, loadFixture } from '../relay/intake.ts';
+import { ingest } from '../../src/lib/core.ts';
 
 type Vector = {
   order: Record<string, unknown>;
@@ -83,6 +84,12 @@ test('order validation permits only the exact wire schema and bounds', () => {
   });
   for (const candidate of [
     { ...valid, extra: 'no' },
+    { ...valid, schemaVersion: '1' },
+    { ...valid, partner: 1 },
+    { ...valid, orderId: 7 },
+    { ...valid, region: {} },
+    { ...valid, quantity: '3' },
+    { ...valid, amountMinor: '4250' },
     { ...valid, schemaVersion: 2 },
     { ...valid, partner: 'other' },
     { ...valid, orderId: '' },
@@ -100,8 +107,6 @@ test('order validation permits only the exact wire schema and bounds', () => {
     { ...valid, amountMinor: 1.5 },
     { ...valid, quantity: Number.NaN },
     { ...valid, amountMinor: Infinity },
-    { ...valid, quantity: '3' },
-    { ...valid, amountMinor: '4250' },
   ])
     assert.throws(() => validateOrder(candidate));
 });
@@ -124,6 +129,26 @@ test('receipt parsing binds every identity field and rejects unsafe substitution
     replayed: true,
   };
   assert.deepEqual(parseReceipt(receipt, order, 'store-1'), receipt);
+  const expectedWithDifferentInsertionOrder = {
+    amountMinor: order.amountMinor,
+    region: order.region,
+    partner: order.partner,
+    quantity: order.quantity,
+    orderId: order.orderId,
+    schemaVersion: order.schemaVersion,
+  } as typeof order;
+  const getReceipt = {
+    schemaVersion: receipt.schemaVersion,
+    vendorOrderId: receipt.vendorOrderId,
+    ...receiptIdentity,
+    order: receipt.order,
+    committedAt: receipt.committedAt,
+    storeId: receipt.storeId,
+  };
+  assert.deepEqual(
+    parseReceipt(getReceipt, expectedWithDifferentInsertionOrder, 'store-1'),
+    getReceipt,
+  );
   for (const unsafe of [
     { ...receipt, vendorOrderId: '' },
     { ...receipt, storeId: 'store-2' },
@@ -148,4 +173,8 @@ test('fixture intake reuses accepted, quarantined, and suppressed existing recor
   assert.equal(northstar.suppressedCount, 1);
   assert.equal(loadFixture('orbit').orders.length, 2);
   assert.throws(() => loadFixture('unknown' as never));
+  assert.throws(() => assertFixtureHasOrders(ingest('', 'northstar')));
+  assert.throws(() =>
+    assertFixtureHasOrders(ingest('Order ID,Region,Quantity,Amount\n', 'northstar')),
+  );
 });

@@ -21,7 +21,9 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(validate_order({**VALID, 'quantity': 1, 'amountMinor': 1})['quantity'], 1)
         self.assertEqual(validate_order({**VALID, 'quantity': 10000, 'amountMinor': 99999999999})['amountMinor'], 99999999999)
         invalid = [
-            {**VALID, 'extra': 'no'}, {**VALID, 'schemaVersion': True}, {**VALID, 'partner': 'other'},
+            {**VALID, 'extra': 'no'}, {**VALID, 'schemaVersion': '1'}, {**VALID, 'partner': 1},
+            {**VALID, 'orderId': 7}, {**VALID, 'region': []}, {**VALID, 'quantity': '3'},
+            {**VALID, 'amountMinor': '4250'}, {**VALID, 'schemaVersion': True}, {**VALID, 'partner': 'other'},
             {**VALID, 'orderId': '-bad'}, {**VALID, 'orderId': 'a' * 65}, {**VALID, 'orderId': 'é'},
             {**VALID, 'region': 'north'}, {**VALID, 'quantity': True}, {**VALID, 'amountMinor': False},
             {**VALID, 'quantity': 1.5}, {**VALID, 'amountMinor': 1.5}, {**VALID, 'quantity': 0},
@@ -41,6 +43,10 @@ class ContractTests(unittest.TestCase):
             decode_order(b'{"schemaVersion":1,"schemaVersion":1}')
         with self.assertRaises(ValueError):
             decode_order(b'[]')
+        for number in (b'NaN', b'Infinity', b'-Infinity'):
+            with self.subTest(number=number):
+                with self.assertRaises(ValueError):
+                    decode_order(b'{"schemaVersion":' + number + b'}')
 
 
 if __name__ == '__main__':

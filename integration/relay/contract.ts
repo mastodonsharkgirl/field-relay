@@ -116,8 +116,8 @@ export const parseReceipt = (value: unknown, expected: Order, storeId: string): 
   if (Object.hasOwn(receipt, 'replayed') && typeof receipt.replayed !== 'boolean')
     throw Error('Receipt replayed is invalid.');
   const order = validateOrder(receipt.order);
-  const identity = identify(expected);
-  if (JSON.stringify(order) !== JSON.stringify(expected))
+  const identity = identify(validateOrder(expected));
+  if (identify(order).canonical !== identity.canonical)
     throw Error('Receipt order does not match expected order.');
   for (const key of ['businessKey', 'payloadDigest', 'idempotencyKey'] as const)
     if (receipt[key] !== identity[key])

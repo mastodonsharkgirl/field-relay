@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { ingest } from '../../src/lib/core.ts';
+import { ingest, type Run } from '../../src/lib/core.ts';
 import { validateOrder, type Order } from './contract.ts';
 
 const fixtures = {
@@ -7,11 +7,15 @@ const fixtures = {
   orbit: new URL('../fixtures/orbit.csv', import.meta.url),
 } as const;
 
-export const loadFixture = (name: 'northstar' | 'orbit') => {
-  if (!Object.hasOwn(fixtures, name)) throw Error('Fixture name is not allowlisted.');
-  const run = ingest(readFileSync(fixtures[name], 'utf8'), name);
+export const assertFixtureHasOrders = (run: Run) => {
   if (run.errors.length || !run.accepted.length)
     throw Error('Fixture must contain at least one accepted record.');
+  return run;
+};
+
+export const loadFixture = (name: 'northstar' | 'orbit') => {
+  if (!Object.hasOwn(fixtures, name)) throw Error('Fixture name is not allowlisted.');
+  const run = assertFixtureHasOrders(ingest(readFileSync(fixtures[name], 'utf8'), name));
   const orders: Order[] = run.accepted.map((record) =>
     validateOrder({
       schemaVersion: 1,
