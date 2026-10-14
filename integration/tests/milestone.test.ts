@@ -11,6 +11,9 @@ import {
 } from '../runtime.ts';
 import { openRelayStore } from '../relay/state.ts';
 import { DatabaseSync } from 'node:sqlite';
+import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { launchExercise } from '../launch.ts';
 import { readFileSync } from 'node:fs';
 import { buildEvidence, renderEvidence, type RunEvidence } from '../relay/evidence.ts';
 
@@ -102,6 +105,44 @@ test('failed report retains safe diagnostic code in both JSON and the human repo
   });
   assert.match(renderEvidence(evidence).markdown, /relay_state_busy/);
   assert.equal(evidence.status, 'failed');
+});
+
+test('a later walkthrough worker retains its real state failure instead of a generic timeout', async () => {
+  const runId = 'later-worker-' + randomUUID();
+  const path = join(projectRoot, '.local/integration', runId, 'relay.sqlite');
+  const exercise = launchExercise({ mode: 'new', runId, scenario: 'walkthrough', scripted: true });
+  let blocker: DatabaseSync | undefined;
+  try {
+    await waitUntil(() => {
+      if (!existsSync(path)) return false;
+      blocker ??= new DatabaseSync(path);
+      const row = blocker
+        .prepare('SELECT approval_state FROM jobs WHERE business_key = ?')
+        .get('["orbit","O-9"]');
+      return row?.approval_state === 'approved';
+    }, 15_000);
+    // Change only this newly created test run's schema marker before the later
+    // CLI opens it. There is no held write lock during report/credential scans.
+    blocker!.exec("UPDATE metadata SET value = '999' WHERE name = 'schemaVersion'");
+    const evidence = await exercise;
+    assert.ok(
+      evidence.scenarioResults.some(
+        (row) => row.name === 'response-loss' && row.status === 'passed',
+      ),
+      'The early scenario must have passed before faulting the later worker',
+    );
+    assert.equal(evidence.status, 'failed');
+    assert.equal(evidence.scenarioResults.at(-1)?.failure?.code, 'relay_state_unavailable');
+    assert.equal(evidence.scenarioResults.at(-1)?.failure?.workerExitCode, 1);
+    assert.equal(evidence.jobs.find((job) => job.order.orderId === 'O-9')?.postReservations, 0);
+    assert.equal(evidence.metadata.cleanupVerified, true);
+    assert.equal(evidence.metadata.credentialScanPassed, true);
+  } finally {
+    if (blocker?.isTransaction) blocker.exec('ROLLBACK');
+    blocker?.exec("UPDATE metadata SET value = '3' WHERE name = 'schemaVersion'");
+    blocker?.close();
+    await exercise;
+  }
 });
 
 // Catches an exited worker being hidden behind a generic milestone timeout.

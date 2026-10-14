@@ -13,7 +13,9 @@ test('interview walkthrough is reachable and returns to the working fictional ex
   for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
     ).toBe(true);
     await expect(
       page.getByRole('link', { name: 'Open the reconciliation desk', exact: true }),

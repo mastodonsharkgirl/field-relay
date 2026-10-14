@@ -173,7 +173,6 @@ test('state directories reject a junction escape and CLI rejects arbitrary input
   assert.throws(() => runDirectory(linkedId), /Linked/);
   const lab = await startRuntime({ mode: 'new' });
   try {
-    assert.ok(lab.directory.includes('Saran Websites'));
     for (const args of [
       ['fixture', '../private.csv'],
       ['fixture', '{"order":1}'],

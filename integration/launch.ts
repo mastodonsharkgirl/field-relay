@@ -333,17 +333,21 @@ export const launchExercise = async (options: {
         await lab.configureFault(backoff.identity.idempotencyKey, ['429_once']);
         const backoffBaseline = await begin(backoff);
         const retrying = lab.startRelay(['dispatch', backoff.jobId]);
-        await waitUntil(() =>
-          store
-            .events(backoff.jobId)
-            .some((event) => event.kind === 'post_settled' && event.httpStatus === 429),
+        await waitUntil(
+          () =>
+            store
+              .events(backoff.jobId)
+              .some((event) => event.kind === 'post_settled' && event.httpStatus === 429),
+          5_000,
+          retrying,
         );
         await command(lab, [
           'revoke',
           backoff.jobId,
           String(store.snapshot(backoff.jobId).approvalRevision),
         ]);
-        if ((await retrying.result).code !== 0) throw Error('Backoff worker failed.');
+        const retried = await retrying.result;
+        if (retried.code !== 0) throw childFailure(retried);
         await record(
           'revoked-during-429-wait',
           backoff.jobId,
@@ -390,6 +394,8 @@ export const launchExercise = async (options: {
                 >
               ).post,
             ) === 1,
+          5_000,
+          admitted,
         );
         await command(lab, [
           'revoke',
@@ -397,7 +403,8 @@ export const launchExercise = async (options: {
           String(store.snapshot(inflight.jobId).approvalRevision),
         ]);
         await lab.releaseBarrier(inflight.identity.idempotencyKey);
-        if ((await admitted.result).code !== 0) throw Error('In-flight worker failed.');
+        const admittedResult = await admitted.result;
+        if (admittedResult.code !== 0) throw childFailure(admittedResult);
         await command(lab, ['inspect', inflight.jobId]);
         await record(
           'revoked-after-admission-may-commit',

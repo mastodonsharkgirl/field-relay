@@ -41,7 +41,14 @@ export class LabFailure extends Error {
 export const safeFailure = (error: unknown): FailureDetails => {
   if (error instanceof LabFailure)
     return { code: error.code, workerExitCode: error.workerExitCode };
-  const value = error as { code?: unknown; errcode?: unknown; name?: unknown } | null;
+  const value = error as {
+    code?: unknown;
+    errcode?: unknown;
+    name?: unknown;
+    message?: unknown;
+  } | null;
+  if (value?.message === 'relay database has an unknown schema version')
+    return { code: 'relay_state_unavailable', workerExitCode: null };
   if (value?.code === 'ERR_SQLITE_ERROR')
     return {
       code:
