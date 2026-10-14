@@ -1,0 +1,12 @@
+(node:86684) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Exercise failure was retained in the saved report.
+✔ a later walkthrough worker retains its real state failure instead of a generic timeout (4732.7489ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4963.9229

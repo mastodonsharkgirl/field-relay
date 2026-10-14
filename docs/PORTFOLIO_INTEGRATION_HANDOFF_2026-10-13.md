@@ -1,5 +1,7 @@
 # Field Relay: local portfolio integration handoff
 
+Latest state, 15 October 2026: [published interview preview](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/), repaired source `b6ce889` pushed to `main`, branch/main CI successful, live static assets hash-verified. See [the latest release](integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md). Earlier dated checkpoints below remain historical. The local HTTP backend is represented by recorded evidence and is not hosted.
+
 Date: 13 October 2026, Asia/Calcutta.
 
 Status: owner approved the architectural design; the implementation plan is prepared for review and execution-method selection. Mock HTTP implementation remains pending.

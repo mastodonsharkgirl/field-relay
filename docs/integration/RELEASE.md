@@ -1,5 +1,7 @@
 # Local verification record — 15 October 2026
 
+This earlier local record is preserved. The subsequent demo repair, successful full hosted checks and published interview preview are recorded in [the latest release](DEMO_REPAIR_AND_PREVIEW_2026-10-15.md). Source `b6ce889` is pushed to `main` and deployed at [Field Relay](https://field-relay-saran.pages.dev/labs/field-relay/). Its historical unknown failure is still not retroactively diagnosed.
+
 The local integration and application gates pass at implementation commit `478a2079ca14be39583de3b684827b6a6e19b570`. Subsequent bounded fixes have focused passing checks. Scoped re-review approved implementation `3813cc0`; whole-branch review then found one missing retry-audit explanation, repaired in `10733d1`. Independent re-review closed that finding with zero remaining Critical, Important or Minor issues. A clean walkthrough and resume at that source pass, while an earlier failed attempt at the same source remains unexplained and preserved below. Local implementation and review are complete with these stated limits; this is not a production release.
 
 At the user's request, this chat checked Compass and verified its completion and explicit compute release. The coordinator subsequently assigned the slot to Field Relay after project #10 stopped at its resource preflight. Verification ran serially with one worker. No unrelated process was stopped and no model inference was run.

@@ -1,0 +1,30 @@
+{
+  "sourceSha": "b6ce88951f46270bf94e98e4ef3487fe961a04f1",
+  "readBackAt": "2026-10-14T20:38:02.605Z",
+  "project": "field-relay-saran",
+  "deploymentId": "8e9d1bec-b9c3-4437-87ff-b325ceb6cfd2",
+  "url": "https://field-relay-saran.pages.dev/labs/field-relay/",
+  "walkthroughUrl": "https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/",
+  "immutableDeployment": "https://8e9d1bec.field-relay-saran.pages.dev/",
+  "ci": "https://github.com/mastodonsharkgirl/field-relay/actions/runs/38632319586",
+  "mainCi": "https://github.com/mastodonsharkgirl/field-relay/actions/runs/38632979548",
+  "packagedFiles": 13,
+  "liveAssetHashesVerified": [
+    "labs/field-relay/_astro/Workbench.BFeXHcNQ.js",
+    "labs/field-relay/_astro/client.CLhIxG29.js",
+    "labs/field-relay/_astro/global.r8qjMpWl.css",
+    "labs/field-relay/_astro/react.DJY1zw8Z.js",
+    "labs/field-relay/case-study/index.html",
+    "labs/field-relay/fixtures/northstar.csv",
+    "labs/field-relay/fixtures/orbit.csv",
+    "labs/field-relay/fonts/GEIST-LICENSE.txt",
+    "labs/field-relay/fonts/geist-latin.woff2",
+    "labs/field-relay/index.html",
+    "labs/field-relay/walkthrough/index.html"
+  ],
+  "customDomainDnsChanged": false,
+  "backendHosted": false,
+  "wranglerVersion": "4.151.0",
+  "hostingNote": "Initial new-project command delegated to Workers and failed without deploying. Direct Pages project creation was verified from installed CLI and official command documentation; deployment then used the Pages project. Local uncommitted documentation warning does not describe the artifact: uploaded bytes came from the clean, successful CI source and were hash verified.",
+  "deploymentConsoleFinishedAtUtc": "2026-10-14T20:34:27.7800398Z"
+}

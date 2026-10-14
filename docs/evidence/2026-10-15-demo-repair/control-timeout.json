@@ -1,0 +1,189 @@
+{
+  "status": "failed",
+  "schemaVersion": 1,
+  "metadata": {
+    "runId": "run-cfc37ce0-625f-41c5-8878-71be33aaff9e",
+    "mode": "new",
+    "scripted": true,
+    "sourceSha": "cfde951254be1e630dfca9bac7254c8e723cc90a",
+    "dirty": false,
+    "nodeVersion": "24.11.0",
+    "pythonVersion": "3.14.3",
+    "sqliteVersion": "3.50.4",
+    "os": "win32 10.0.26200",
+    "startedAt": "2026-10-14T20:14:43.353Z",
+    "finishedAt": "2026-10-14T20:14:50.233Z",
+    "timezone": "Asia/Calcutta",
+    "elapsedMs": 6953,
+    "credentialScanPassed": true,
+    "cleanupVerified": true,
+    "commands": ["node integration/launch.ts --scripted"],
+    "fixtureHashes": {
+      "northstar": "de9435a1314739d15df17e6a6b3b7fb16558660fec02ee2a90832bcec7c91ca5",
+      "orbit": "9d6a82ac0362ee9563a73315ef79364fccc8976b22984c9c04e4dc2dce2702a4"
+    }
+  },
+  "jobs": [
+    {
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "vendorStoreId": "store-6a0698efe0578192b5ca55af",
+      "approvalRevision": 1,
+      "approvalState": "approved",
+      "approvalExpiresAt": 1792009485548,
+      "holdReason": null,
+      "postReservations": 1,
+      "getReservations": 1,
+      "firstAdmissionAt": 1792008885971,
+      "deadlineAt": 1792008915971,
+      "nextAttemptAt": 1792008886774,
+      "leaseId": null,
+      "leaseExpiresAt": null,
+      "observed": "unknown",
+      "outcome": "retryable",
+      "order": {
+        "schemaVersion": 1,
+        "partner": "northstar",
+        "orderId": "0007",
+        "region": "North",
+        "quantity": 3,
+        "amountMinor": 4250
+      },
+      "identity": {
+        "businessKey": "[\"northstar\",\"0007\"]",
+        "canonical": "[1,\"northstar\",\"0007\",\"North\",3,4250]",
+        "payloadDigest": "f1392e79fa3c8af1021a0550c4df83c5f7c4f23c824ceaffa7afd67cb1400937",
+        "idempotencyKey": "5756eefec8edeb8364aef29e49e7d535727b7f9e518518a0517e5d6ff8191b3b"
+      },
+      "claimedReceipt": null,
+      "receipt": null
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "kind": "enqueued",
+      "at": 1792008884993,
+      "approvalRevision": 0,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 2,
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "kind": "approved",
+      "at": 1792008885548,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "harness",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 3,
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "kind": "post_reserved",
+      "at": 1792008885971,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "9f86bbfa-a0f4-452d-90d9-50977803520d"
+    },
+    {
+      "sequence": 4,
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "kind": "post_settled",
+      "at": 1792008886749,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": null,
+      "nextAttemptAt": 1792008886774,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "9f86bbfa-a0f4-452d-90d9-50977803520d"
+    },
+    {
+      "sequence": 5,
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "kind": "retry_scheduled",
+      "at": 1792008886749,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": null,
+      "nextAttemptAt": 1792008886774,
+      "reason": "full_jitter",
+      "scheduledDelayMs": 25,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "9f86bbfa-a0f4-452d-90d9-50977803520d"
+    },
+    {
+      "sequence": 6,
+      "jobId": "4e9d2c43-ae2c-4202-81b4-6b3aa351de22",
+      "kind": "read_reserved",
+      "at": 1792008887808,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "ee8b38fc-e2d1-4cf7-b793-1a70e95b29ea"
+    }
+  ],
+  "vendorReadback": {
+    "readAt": "2026-10-14T20:14:48.839Z",
+    "httpStatus": null,
+    "storeId": null,
+    "count": null,
+    "inspectionRequests": 26,
+    "verification": "unavailable",
+    "orders": []
+  },
+  "scenarioResults": [
+    {
+      "failure": {
+        "code": "control_timeout",
+        "workerExitCode": null
+      },
+      "name": "exercise-interrupted",
+      "status": "failed",
+      "reason": "A local supplier control request exceeded its transport deadline.",
+      "expectedCount": 0,
+      "observedCount": null,
+      "exactPayload": null,
+      "postCount": 1,
+      "automaticGetCount": 0,
+      "elapsedMs": 5482,
+      "wirePostCount": null,
+      "wireGetCount": null,
+      "replayAcknowledgments": null,
+      "checks": []
+    }
+  ]
+}

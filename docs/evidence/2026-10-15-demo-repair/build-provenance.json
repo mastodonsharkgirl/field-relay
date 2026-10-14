@@ -1,0 +1,58 @@
+{
+  "sourceSha": "b6ce88951f46270bf94e98e4ef3487fe961a04f1",
+  "packagedAt": "2026-10-14T20:29:07.862Z",
+  "files": [
+    {
+      "path": "_headers",
+      "sha256": "f8d501e5912539622e462b13ae4f17189539c089802171510016555931d79887"
+    },
+    {
+      "path": "_redirects",
+      "sha256": "bd3d62bd6b0d6de6e3fd0f7526eb0b1139be59464401bb28aab1a0164b329ae4"
+    },
+    {
+      "path": "labs/field-relay/_astro/Workbench.BFeXHcNQ.js",
+      "sha256": "ba562460438aec086fe1a3b64725b3a62baaa62ceca7b40aadd037cc828bf968"
+    },
+    {
+      "path": "labs/field-relay/_astro/client.CLhIxG29.js",
+      "sha256": "4698c577644dd82e07506c5a67216e21b73de9e14974388ab099053a7dcaec7f"
+    },
+    {
+      "path": "labs/field-relay/_astro/global.r8qjMpWl.css",
+      "sha256": "ef9cb924493fbc543cba4ceb2915d3c158171f535b36b33566763ffa715218a6"
+    },
+    {
+      "path": "labs/field-relay/_astro/react.DJY1zw8Z.js",
+      "sha256": "702812fc9378c73101b63526d0318d087e3d267ac7d54d67bd9c269dd1fcdbb6"
+    },
+    {
+      "path": "labs/field-relay/case-study/index.html",
+      "sha256": "1301953c32575178c96978a00b99eba133dca55d535c968c1450570753d2bf17"
+    },
+    {
+      "path": "labs/field-relay/fixtures/northstar.csv",
+      "sha256": "dc08082ce30f048e4ce10f9f53b42abbc3f42d38a5ebadb851cec7bce8a11151"
+    },
+    {
+      "path": "labs/field-relay/fixtures/orbit.csv",
+      "sha256": "6f1ce7ae94f3a8647420d8fac8c28baddb43a1e8a99aef79b54f95377895ab71"
+    },
+    {
+      "path": "labs/field-relay/fonts/GEIST-LICENSE.txt",
+      "sha256": "71609cbb5c78b5870d712eab73a31d76622635c6ed034ab5cee3b9ecbda8685f"
+    },
+    {
+      "path": "labs/field-relay/fonts/geist-latin.woff2",
+      "sha256": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1"
+    },
+    {
+      "path": "labs/field-relay/index.html",
+      "sha256": "19e8cddc3318270893de34c450d48b1b399da64a80aa82e4aba894afbd48fb77"
+    },
+    {
+      "path": "labs/field-relay/walkthrough/index.html",
+      "sha256": "0ef47cc5ccfcd871fed476ed6b9e4eba74ab6338333ddb97ccdc703388bb9f92"
+    }
+  ]
+}

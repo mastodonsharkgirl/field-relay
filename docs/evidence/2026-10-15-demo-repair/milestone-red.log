@@ -1,0 +1,46 @@
+(node:42688) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✖ a slow starting relay gets its full milestone window after readiness (2334.1829ms)
+✖ a failed relay is reported promptly with an allowlisted failure code (2018.7983ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4610.1502
+
+✖ failing tests:
+
+test at integration\tests\milestone.test.ts:8:1
+✖ a slow starting relay gets its full milestone window after readiness (2334.1829ms)
+  Error: Expected lab milestone did not arrive.
+      at waitUntil (file:///C:/Users/Kanak/Documents/Saran%20Websites/repos/field-relay/.worktrees/mock-http/integration/runtime.ts:506:39)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async TestContext.<anonymous> (file:///C:/Users/Kanak/Documents/Saran%20Websites/repos/field-relay/.worktrees/mock-http/integration/tests/milestone.test.ts:20:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+
+test at integration\tests\milestone.test.ts:29:1
+✖ a failed relay is reported promptly with an allowlisted failure code (2018.7983ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'relay_state_busy'
+  
+      at Object.<anonymous> (file:///C:/Users/Kanak/Documents/Saran%20Websites/repos/field-relay/.worktrees/mock-http/integration/tests/milestone.test.ts:35:14)
+      at expectedException (node:assert:578:17)
+      at expectsError (node:assert:703:21)
+      at strict.rejects (node:assert:769:3)
+      at async TestContext.<anonymous> (file:///C:/Users/Kanak/Documents/Saran%20Websites/repos/field-relay/.worktrees/mock-http/integration/tests/milestone.test.ts:33:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'relay_state_busy',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

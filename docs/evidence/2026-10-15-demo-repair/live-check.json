@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-14T20:36:29.236Z",
+  "url": "https://field-relay-saran.pages.dev/labs/field-relay/",
+  "walkthrough": "https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/",
+  "checks": [
+    {
+      "width": 320,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 768,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 1440,
+      "horizontalOverflow": false
+    }
+  ],
+  "workingDesk": true,
+  "simulatorOutageRecoveryReplayAndDownload": true,
+  "expandedClaudeProposal": true,
+  "pageErrors": [],
+  "externalOrigins": [],
+  "deviceEmulation": true
+}

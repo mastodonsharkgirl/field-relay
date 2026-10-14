@@ -1,0 +1,14 @@
+(node:55156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ a slow starting relay gets its full milestone window after readiness (3411.8606ms)
+✔ a real SQLite lock is diagnosed without admitting a supplier POST (1646.4922ms)
+✔ failed report retains safe diagnostic code in both JSON and the human report (3.8753ms)
+✔ a failed relay is reported promptly with an allowlisted failure code (213.9036ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5515.2844

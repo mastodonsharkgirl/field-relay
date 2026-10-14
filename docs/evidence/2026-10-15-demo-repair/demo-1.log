@@ -1,0 +1,14 @@
+
+> field-relay@1.0.0 integration:demo
+> node integration/launch.ts --scripted
+
+(node:6920) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Synthetic local exercise: run-71756535-130d-40a1-88a8-d39d757fb8c1
+Reports: D:\a\field-relay\field-relay\.local\integration\run-71756535-130d-40a1-88a8-d39d757fb8c1\reports
+passed: response-loss (verified orders 1)
+passed: repeat-dispatch-after-both-process-restarts (verified orders 1)
+passed: changed-payload-held (verified orders 1)
+passed: revoked-during-429-wait (verified orders 0)
+passed: revoked-after-admission-may-commit (verified orders 1)
+Overall verified result: passed

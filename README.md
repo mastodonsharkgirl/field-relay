@@ -4,6 +4,8 @@ Field Relay helps someone answer: **what changed between these two CSV exports?*
 
 The repository also contains two separate fictional learning exercises: the existing browser delivery simulator and an opt-in local HTTP lab. Browser files and approvals never enter the HTTP lab. No real supplier, customer account or model is connected.
 
+Published interview preview: [open Field Relay](https://field-relay-saran.pages.dev/labs/field-relay/) or [start the five-minute walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/). Repaired source `b6ce889` is pushed to `main`, both branch/main CI passed, and the tested static bundle is deployed. [Latest release and evidence](docs/integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md). The older local checkpoint below remains historical.
+
 ## Run
 
 `npm ci`, then `npm run dev`. Use `npm test` for deterministic fixture tests and `npm run qa` for type checks, linting, formatting, unit tests, build and Playwright checks. Install the browser once with `npx playwright install chromium` before running browser checks.

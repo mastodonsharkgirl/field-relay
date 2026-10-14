@@ -1,0 +1,41 @@
+(node:76500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ a real SQLite lock is diagnosed without admitting a supplier POST (2468.4484ms)
+✖ failed report retains safe diagnostic code in both JSON and the human report (3.9206ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2754.2078
+
+✖ failing tests:
+
+test at integration\tests\milestone.test.ts:56:1
+✖ failed report retains safe diagnostic code in both JSON and the human report (3.9206ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + undefined
+  - {
+  -   code: 'relay_state_busy',
+  -   workerExitCode: 1
+  - }
+  
+      at TestContext.<anonymous> (file:///C:/Users/Kanak/Documents/Saran%20Websites/repos/field-relay/.worktrees/mock-http/integration/tests/milestone.test.ts:60:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'relay_state_busy', workerExitCode: 1 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

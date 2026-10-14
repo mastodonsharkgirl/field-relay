@@ -18,4 +18,6 @@ The separate Delivery simulator lab retains the earlier fictional partner-order 
 
 ## Interface direction
 
+The published [interview walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/) uses the same paper/ink direction and links to the working desk. It explains the hypothetical supply-chain problem and recorded HTTP experiment with real source-labelled evidence. Publication and repaired-source verification are in [the current release](integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md).
+
 The primary desk leads with “Find what changed between two exports.” It keeps actual results, exact source evidence, clear limits, and a restrained paper/ink surface visible from phone to desktop. The simulator stays clearly labelled as a separate local lab.

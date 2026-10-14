@@ -1,5 +1,7 @@
 # Explain Field Relay in an interview
 
+Start with the [published five-minute walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/). It links to the working browser desk and distinguishes the browser simulator from recorded local HTTP evidence. The [latest release](DEMO_REPAIR_AND_PREVIEW_2026-10-15.md) records the readiness/diagnostic repair, three passing fresh hosted demos and successful resume. The historical failure's exact cause remains unknown.
+
 This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. Local integration, build and browser checks have passed; use the [release record](RELEASE.md) for current review status and the [saved evidence](../evidence/2026-10-15-mock-http/audited/README.md) for measured outcomes, including the initial failed attempt and successful repeat.
 
 ## Start with the problem
