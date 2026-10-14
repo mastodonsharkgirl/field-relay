@@ -16,6 +16,7 @@ import {
 import { openRelayStore } from './relay/state.ts';
 import { identify } from './relay/contract.ts';
 import type { JobSnapshot } from './relay/state-types.ts';
+import { childFailure, safeFailure, failureMessage } from './failures.ts';
 import {
   buildEvidence,
   readVendorList,
@@ -34,8 +35,8 @@ type JobPredicate = (job: JobSnapshot) => boolean;
 
 const command = async <T>(lab: Runtime, args: string[]): Promise<T> => {
   const result = await lab.command(args);
-  if (result.code !== 0 || !lab.scanCredentials([result.stdout, result.stderr]))
-    throw Error('Relay command failed.');
+  if (!lab.scanCredentials([result.stdout, result.stderr])) throw Error('Relay command failed.');
+  if (result.code !== 0) throw childFailure(result);
   return JSON.parse(result.stdout) as T;
 };
 
@@ -259,12 +260,16 @@ export const launchExercise = async (options: {
       const lossBaseline = await begin(loss);
       const sending = lab.startRelay(['dispatch', loss.jobId]);
       // Observe committed vendor state while the POST response is still withheld.
-      await waitUntil(async () => {
-        inspectionRequests++;
-        return (await controlRequest(lab.connection, '/v1/orders')).body.count === 1;
-      });
+      await waitUntil(
+        async () => {
+          inspectionRequests++;
+          return (await controlRequest(lab.connection, '/v1/orders')).body.count === 1;
+        },
+        5_000,
+        sending,
+      );
       const sent = await sending.result;
-      if (sent.code !== 0) throw Error('Response-loss worker failed.');
+      if (sent.code !== 0) throw childFailure(sent);
       await lab.releaseBarrier(loss.identity.idempotencyKey);
       await record(
         'response-loss',
@@ -431,12 +436,14 @@ export const launchExercise = async (options: {
         );
       }
     }
-  } catch {
+  } catch (error: unknown) {
     exerciseFailed = true;
+    const failure = safeFailure(error);
     results.push({
       name: 'exercise-interrupted',
       status: 'failed',
-      reason: 'Exercise did not complete; inspect saved state before retrying.',
+      reason: failureMessage(failure),
+      failure,
       expectedCount: 0,
       observedCount: null,
       exactPayload: null,

@@ -16,6 +16,7 @@ import { setTimeout, clearTimeout } from 'node:timers';
 import { setTimeout as delay } from 'node:timers/promises';
 import { openRelayStore } from './relay/state.ts';
 import type { VendorConnection } from './relay/transport.ts';
+import { LabFailure, childFailure } from './failures.ts';
 
 export const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 export const runsRoot = join(projectRoot, '.local', 'integration');
@@ -411,7 +412,12 @@ export const startRuntime = async (options: {
       FIELD_RELAY_VENDOR_STORE_ID: connection.storeId,
     });
     return track(
-      ownedProcess(process.execPath, [join(projectRoot, 'integration/relay/cli.ts'), ...args], env),
+      ownedProcess(
+        process.execPath,
+        [join(projectRoot, 'integration/relay/cli.ts'), ...args],
+        env,
+        true,
+      ),
     );
   };
   const admin = async (
@@ -500,10 +506,46 @@ export const startRuntime = async (options: {
   };
 };
 
-export const waitUntil = async (check: () => Promise<boolean> | boolean, timeoutMs = 5_000) => {
+export const waitUntil = async (
+  check: () => Promise<boolean> | boolean,
+  timeoutMs = 5_000,
+  worker?: OwnedProcess,
+) => {
+  let finished: ProcessResult | undefined;
+  if (worker) {
+    // Startup is not supplier latency. Attach immediately after spawn and give
+    // initialization its own finite window; the 750 ms HTTP limit is unchanged.
+    await new Promise<void>((resolveReady, reject) => {
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new LabFailure('relay_startup_timeout'));
+      }, 10_000);
+      const onMessage = (value: unknown) => {
+        if (value && typeof value === 'object' && 'kind' in value && value.kind === 'relay_ready') {
+          cleanup();
+          resolveReady();
+        }
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        worker.child.off('message', onMessage);
+      };
+      worker.child.on('message', onMessage);
+      void worker.result.then((result) => {
+        finished = result;
+        cleanup();
+        reject(
+          result.code === 0 ? new LabFailure('relay_milestone_missing', 0) : childFailure(result),
+        );
+      });
+    });
+  }
   const deadline = Date.now() + timeoutMs;
-  while (!(await check())) {
-    if (Date.now() >= deadline) throw Error('Expected lab milestone did not arrive.');
+  while (true) {
+    if (finished && finished.code !== 0) throw childFailure(finished);
+    if (await check()) return;
+    if (finished) throw new LabFailure('relay_milestone_missing', finished.code);
+    if (Date.now() >= deadline) throw new LabFailure('milestone_timeout');
     await delay(20);
   }
 };

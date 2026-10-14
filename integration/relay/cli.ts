@@ -6,6 +6,7 @@ import { openRelayStore } from './state.ts';
 import { dispatch, inspectOrder } from './dispatch.ts';
 import { readVendorList } from './evidence.ts';
 import { runDirectory, startRuntime } from '../runtime.ts';
+import { safeFailure } from '../failures.ts';
 
 export const runRelayCommand = async (args: string[]): Promise<unknown> => {
   const runId = process.env.FIELD_RELAY_RUN_ID ?? '';
@@ -59,6 +60,7 @@ export const runRelayCommand = async (args: string[]): Promise<unknown> => {
       return store.revoke(argument, Number(revision), 'authorization_revoked', Date.now());
     }
     if (args.length !== 2) throw Error('Invalid command arguments.');
+    process.send?.({ kind: 'relay_ready' });
     return verb === 'dispatch'
       ? await dispatch(store, argument, connection, randomUUID())
       : await inspectOrder(store, argument, connection);
@@ -85,10 +87,11 @@ const main = async () => {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main()
     .then((result) => process.stdout.write(JSON.stringify(result) + '\n'))
-    .catch(() => {
+    .catch((error: unknown) => {
       process.stderr.write(
         'Local relay command failed. Check the command, revision and saved run; state was preserved.\n',
       );
+      process.stderr.write(JSON.stringify({ failureCode: safeFailure(error).code }) + '\n');
       process.exitCode = 1;
     });
 }

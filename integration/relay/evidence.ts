@@ -5,6 +5,8 @@ import { parseReceipt, validateOrder, type VendorReceipt } from './contract.ts';
 import { exchange, type VendorConnection } from './transport.ts';
 import type { JobSnapshot, AuditEvent } from './state-types.ts';
 import { controlRequest } from '../runtime.ts';
+import type { FailureDetails } from '../failures.ts';
+import { normalizeFailure } from '../failures.ts';
 
 export type RunMetadata = {
   runId: string;
@@ -35,6 +37,7 @@ export type VendorListReadback = {
   verification: 'verified' | 'unavailable' | 'invalid';
 };
 export type ScenarioResult = {
+  failure?: FailureDetails;
   jobId?: string;
   checks?: Measurement[];
   eventSequences?: number[];
@@ -287,6 +290,7 @@ export const buildEvidence = (
       orders: input.vendorReadback.orders.map((receipt) => safeReceipt(receipt)!),
     },
     scenarioResults: input.scenarioResults.map((result) => ({
+      ...(result.failure ? { failure: normalizeFailure(result.failure) } : {}),
       ...pick(result, [
         'jobId',
         'eventSequences',
@@ -347,7 +351,7 @@ export const renderEvidence = (evidence: RunEvidence) => {
   const details = evidence.scenarioResults
     .map(
       (row) =>
-        `\n## ${row.name}\n\nJob: ${row.jobId ?? 'unavailable'}. Final relay state: ${row.finalState ?? 'unavailable'}. Relevant audit sequences: ${(row.eventSequences ?? []).join(', ')}.\n\nWire totals for this key: POST ${row.wirePostCount ?? 'unknown'}, GET ${row.wireGetCount ?? 'unknown'}, replay acknowledgments ${row.replayAcknowledgments ?? 'unknown'}. GET totals include evidence inspections; deltas and their components are checked below.\n\n| Measurement | Comparison | Expected | Observed | Result |\n| --- | --- | --- | --- | --- |\n${(row.checks ?? []).map((check) => `| ${check.name} | ${check.mode} | ${String(check.expected)} | ${String(check.observed)} | ${measurementPassed(check) ? 'passed' : 'failed'} |`).join('\n')}\n`,
+        `\n## ${row.name}\n\n${row.failure ? `Failure code: ${row.failure.code}. Worker exit: ${row.failure.workerExitCode ?? 'unavailable'}. ${row.reason}\n\n` : ''}Job: ${row.jobId ?? 'unavailable'}. Final relay state: ${row.finalState ?? 'unavailable'}. Relevant audit sequences: ${(row.eventSequences ?? []).join(', ')}.\n\nWire totals for this key: POST ${row.wirePostCount ?? 'unknown'}, GET ${row.wireGetCount ?? 'unknown'}, replay acknowledgments ${row.replayAcknowledgments ?? 'unknown'}. GET totals include evidence inspections; deltas and their components are checked below.\n\n| Measurement | Comparison | Expected | Observed | Result |\n| --- | --- | --- | --- | --- |\n${(row.checks ?? []).map((check) => `| ${check.name} | ${check.mode} | ${String(check.expected)} | ${String(check.observed)} | ${measurementPassed(check) ? 'passed' : 'failed'} |`).join('\n')}\n`,
     )
     .join('\n');
   const totals = ['passed', 'failed', 'skipped']
