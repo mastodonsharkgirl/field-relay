@@ -73,8 +73,8 @@ const base = import.meta.env.BASE_URL;
       </p>
       <p>
         <a href={base}>Open the reconciliation desk</a> · <a
-          href="https://github.com/mastodonsharkgirl/field-relay">Inspect the source</a
-        >
+          href={base.replace(/\/?$/, '/') + 'walkthrough/'}>Interview walkthrough</a
+        > · <a href="https://github.com/mastodonsharkgirl/field-relay">Inspect the source</a>
       </p>
     </main>
   </body>

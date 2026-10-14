@@ -10,3 +10,49 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run qa
+      - id: package
+        run: |
+          artifact_path=$(node scripts/prepare-pages.mjs)
+          printf 'artifact_path=%s\n' "$artifact_path" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: field-relay-pages-${{ github.sha }}
+          path: ${{ steps.package.outputs.artifact_path }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: field-relay-build-provenance-${{ github.sha }}
+          path: ${{ steps.package.outputs.artifact_path }}.json
+  integration:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.11.0', cache: npm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.14' }
+      - run: npm ci
+      - run: npm run integration:check
+      - run: npm run integration:test
+      - name: Three fresh walkthroughs and a resume
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path .local/ci -Force | Out-Null
+          for ($taskAttempt = 1; $taskAttempt -le 3; $taskAttempt++) {
+            npm run integration:demo -- --scripted 2>&1 | Tee-Object -FilePath ".local/ci/demo-$taskAttempt.log"
+            if ($LASTEXITCODE -ne 0) { throw "Walkthrough $taskAttempt failed; evidence is retained." }
+          }
+          $taskLastRun = Get-ChildItem .local/integration -Directory -Filter 'run-*' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          npm run integration:demo -- --scripted --resume $taskLastRun.Name 2>&1 | Tee-Object -FilePath .local/ci/resume.log
+          if ($LASTEXITCODE -ne 0) { throw 'Resume failed; evidence is retained.' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: field-relay-integration-${{ github.sha }}
+          include-hidden-files: true
+          path: |
+            .local/ci/*.log
+            .local/integration/**/reports/*
+            .local/integration/test-runs/**/node.log
+            .local/integration/test-runs/**/python.log
+            .local/integration/test-runs/**/summary.json

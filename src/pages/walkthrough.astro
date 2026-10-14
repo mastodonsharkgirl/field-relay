@@ -1,0 +1,298 @@
+---
+import '../styles/global.css';
+import record from '../../docs/evidence/2026-10-15-mock-http/audited/walkthrough.json';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const labels: Record<string, string> = {
+  'response-loss': 'Supplier saves the order, confirmation is lost',
+  'repeat-dispatch-after-both-process-restarts': 'Restart and repeat the verified order',
+  'changed-payload-held': 'Change the amount under the same order ID',
+  'revoked-during-429-wait': 'Revoke approval while waiting to retry',
+  'revoked-after-admission-may-commit': 'Revoke after the send has been admitted',
+};
+if (record.status !== 'passed' || record.vendorReadback.verification !== 'verified')
+  throw Error('The walkthrough requires an actual verified local report.');
+const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/field-relay-mock-http';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex" />
+    <title>Field Relay — interview walkthrough</title>
+    <meta
+      name="description"
+      content="A five-minute walkthrough of CSV reconciliation and a recorded local experiment in uncertain order delivery."
+    />
+  </head>
+  <body>
+    <main class="tour">
+      <header class="masthead">
+        <a class="wordmark" href={base}><span>F</span>IELD RELAY</a>
+        <nav aria-label="Walkthrough navigation">
+          <a href={base + 'case-study/'}>Case study</a>
+          <a href={source}>Source</a>
+        </nav>
+      </header>
+      <section class="tour-intro">
+        <p class="eyebrow">INTERVIEW WALKTHROUGH / FICTIONAL ORDERS</p>
+        <h1>Walk through Field Relay in five minutes.</h1>
+        <p class="lede">
+          Find a difference. Inspect the original rows. Then explain what happens when an order is
+          saved but its confirmation never arrives.
+        </p>
+        <p>
+          This is an AI-assisted portfolio prototype. The supply-chain coordinator below is
+          hypothetical. The website works with files in your browser; the separate HTTP experiment
+          was run locally.
+        </p>
+        <a class="tour-action" href={base}>Open the reconciliation desk</a>
+      </section>
+      <section aria-labelledby="compare">
+        <p class="eyebrow">01 / TRY THE WORKING DESK</p>
+        <h2 id="compare">What changed between these exports?</h2>
+        <p>
+          Imagine a coordinator comparing a supplier export with the team’s sheet before a handoff.
+          Some values have changed. An order is missing. An ID appears twice.
+        </p>
+        <ol>
+          <li>
+            Open the desk. The fictional exports and their field mappings are already loaded. Choose <strong
+              >Reload fictional example</strong
+            > to start over, or <strong>Try a fictional order handoff</strong> after clearing the example.
+          </li>
+          <li>
+            Select a finding. Read the baseline and candidate rows instead of guessing which version
+            is right.
+          </li>
+          <li>
+            Record a review decision with a reason. Duplicate and blank IDs remain ambiguous.
+            Download the evidence before closing the tab.
+          </li>
+        </ol>
+        <p class="note">
+          “Local” means these files stay in the current browser tab. Reviewing a difference does not
+          send an order or update another system.
+        </p>
+      </section>
+      <section aria-labelledby="delivery">
+        <p class="eyebrow">02 / EXPLAIN UNCERTAIN DELIVERY</p>
+        <h2 id="delivery">A timeout does not tell you whether the order was saved.</h2>
+        <p>
+          The coordinator submits an approved order. The supplier saves it, but the reply is lost.
+          Sending a new order could create a duplicate. Assuming nothing happened could hide
+          accepted work.
+        </p>
+        <div class="flow" aria-label="Order recovery sequence">
+          <span>Approve exact fields</span><span>Send with a stable reference</span><span
+            >Reply is lost</span
+          ><span>Read the supplier’s saved order</span><span>Verify the exact receipt</span>
+        </div>
+        <p>
+          The local relay preserves decisions through restarts, limits retries and holds conflicting
+          evidence for investigation. Approval before a send and revocation after a send are
+          different events: an already admitted request can still commit.
+        </p>
+        <details>
+          <summary>What can I actually operate in this website?</summary>
+          <p>
+            The reconciliation desk and the <strong>Delivery simulator lab</strong> run in the browser.
+            The simulator is a separate fictional exercise with outage, retry and replay controls. It
+            consumes no reconciliation result. The Python/SQLite HTTP experiment shown below is recorded
+            evidence, not a remotely connected backend.
+          </p>
+        </details>
+      </section>
+      <section aria-labelledby="proof">
+        <p class="eyebrow">03 / CHECK THE EVIDENCE</p>
+        <h2 id="proof">Recorded local HTTP experiment</h2>
+        <p>
+          <strong
+            >{record.scenarioResults.length} scenarios passed; {record.vendorReadback.count} exact supplier
+            orders verified.</strong
+          > These are measured results from fictional local fixtures, including injected failures. They
+          are not customer outcomes.
+        </p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Recorded scenario results">
+          <table>
+            <thead
+              ><tr
+                ><th scope="col">Scenario</th><th scope="col">Result</th><th scope="col"
+                  >Verified orders for this scenario</th
+                ></tr
+              ></thead
+            >
+            <tbody
+              >{
+                record.scenarioResults.map((row) => (
+                  <tr>
+                    <>
+                      <th scope="row">{labels[row.name] ?? row.name}</th>
+                      <td>{row.status}</td>
+                      <td>{row.observedCount ?? 'unverified'}</td>
+                    </>
+                  </tr>
+                ))
+              }</tbody
+            >
+          </table>
+        </div>
+        <p class="note">
+          Recorded 15 October 2026. Source {record.metadata.sourceSha.slice(0, 7)}; clean source: {
+            String(!record.metadata.dirty)
+          }. Scenario counts refer to separate checks and must not be added together as unique
+          orders.
+        </p>
+        <p>
+          <a href={source + '/docs/evidence/2026-10-15-mock-http'}
+            >Inspect the reports and failed attempts</a
+          >. An earlier run stopped before admission and did not retain its exact cause. The repair
+          separates relay startup from the supplier wait and preserves safe failure codes.
+          Historical failures remain visible.
+        </p>
+      </section>
+      <section aria-labelledby="explain">
+        <p class="eyebrow">04 / SAY IT IN YOUR OWN WORDS</p>
+        <h2 id="explain">The answer you should be able to defend.</h2>
+        <blockquote>
+          “I built Field Relay with AI coding assistance to explore an operations problem: how do
+          you understand changes between exports, and recover when an order request times out? The
+          desk shows source rows. The separate local lab keeps the approved order fixed, uses one
+          stable identity, and checks what the supplier actually saved. I inject failures and
+          inspect the results. It is a learning prototype using fictional data.”
+        </blockquote>
+        <p>
+          Be ready to explain why a successful response is only a claim, why a changed amount needs
+          fresh approval, and why bounded retries can leave an unresolved exception. Describe your
+          own decisions and learning honestly.
+        </p>
+        <details>
+          <summary>Where could Claude fit later?</summary>
+          <p>
+            A proposed extension could turn a messy supplier message into an order proposal.
+            Application code would validate it, a person would approve exact fields, and the
+            deterministic relay would handle delivery. A model should not infer permission or invent
+            a delivery status. No Claude call exists in this prototype.
+          </p>
+        </details>
+        <p>
+          <a href={source + '/docs/integration/INTERVIEW_GUIDE.md'}
+            >Read the complete interview guide</a
+          > · <a href={base}>Return to the desk</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
+<style>
+  .tour {
+    max-width: 880px;
+    margin: auto;
+    padding: 20px clamp(16px, 4vw, 40px) 64px;
+  }
+  .tour section {
+    padding: 34px 0;
+    border-bottom: 1px solid #c6c1b6;
+  }
+  .tour-intro {
+    padding-top: 52px !important;
+  }
+  h1 {
+    max-width: 680px;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    line-height: 1.1;
+  }
+  h2 {
+    font-size: clamp(1.35rem, 3vw, 1.8rem);
+  }
+  p,
+  li,
+  blockquote {
+    line-height: 1.7;
+    color: #46564e;
+  }
+  li + li {
+    margin-top: 12px;
+  }
+  ol {
+    padding-left: 24px;
+  }
+  .lede {
+    font-size: 1.14rem;
+  }
+  .tour-action {
+    display: inline-block;
+    padding: 12px 18px;
+    background: #163c35;
+    color: #f8f5ee;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 6px;
+  }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 22px 0;
+  }
+  .flow span {
+    padding: 9px 12px;
+    border: 1px solid #c6c1b6;
+    background: #f8f5ee;
+    font-size: 0.88rem;
+  }
+  details {
+    padding: 16px 0;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  summary:focus-visible,
+  .table-scroll:focus-visible {
+    outline: 3px solid #d6723e;
+    outline-offset: 3px;
+  }
+  .table-scroll {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  th,
+  td {
+    padding: 12px;
+    border-bottom: 1px solid #c6c1b6;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  thead {
+    background: #e7e7da;
+  }
+  tbody th {
+    font-weight: 500;
+  }
+  .note {
+    font-size: 0.85rem;
+  }
+  blockquote {
+    margin: 24px 0;
+    padding: 12px 20px;
+    border-left: 3px solid #38685b;
+    background: #f8f5ee;
+  }
+  @media (max-width: 480px) {
+    th,
+    td {
+      padding: 8px;
+    }
+    .tour-intro {
+      padding-top: 32px !important;
+    }
+  }
+</style>

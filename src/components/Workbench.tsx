@@ -314,6 +314,7 @@ function ReconciliationDesk() {
           <p>Compare two exports before a handoff.</p>
         </div>
         <nav aria-label="Field Relay areas">
+          <a href="walkthrough/">Interview walkthrough</a>
           <a href="case-study/">Case study</a>
           <a href="https://github.com/mastodonsharkgirl/field-relay" rel="noreferrer">
             Source
