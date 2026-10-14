@@ -10,7 +10,7 @@
 
 **Spec:** [Approved integration design](../specs/2026-10-13-mock-http-integration-design.md). Owner approved the written spec with “go ahead, use @Superpowers” and subsequently explicitly approved the Field Relay plan. Execution began with sequential subagents and scoped reviews, then continued inline after an unavailable implementer, preserving the review gates.
 
-**Current checkpoint, 15 October 2026:** Tasks 1–4 are implemented and reviewed. Task 5 launcher/lifecycle source and Task 6 interview/documentation drafts are present. Aggregate integration, full application QA and final whole-branch review remain pending; see [release checkpoint](../../integration/RELEASE.md). The original task checklist below is retained as the acceptance contract, not a claim that every item is complete.
+**Final local disposition, 15 October 2026:** Tasks 1–6 are implemented, verified and reviewed, with source-specific evidence and known limits in the [release record](../../integration/RELEASE.md). Full aggregate/application gates passed at `478a207`; subsequent bounded changes have focused verification, clean walkthrough/resume evidence and final independent review through `10733d1`. One unexplained failed demo remains preserved beside the successful repeat. The original task checklist below is retained as the original acceptance contract; it is not retroactively marked as a perfect test-first execution history. The execution ledger and review record describe deviations and evidence accurately. No push or deployment was performed.
 
 ## Global Constraints
 

@@ -2,7 +2,7 @@
 
 Field Relay is a browser-local reconciliation desk for comparing a baseline CSV export with a candidate export before a handoff. The comparison workflow works with pasted or locally selected CSV files; its included examples and delivery lab are fictional. It never connects to vendors, retains source files after the tab closes, sends orders, or changes a downstream system.
 
-Those memory-only and no-delivery limits describe the browser product. A separately launched, synthetic-only HTTP exercise now lives in this repository and is undergoing final acceptance. It uses fictional fixture files, a local mock supplier and on-disk SQLite state. It has no browser data path and no real vendor connection. Its current evidence and remaining checks are in [the release checkpoint](integration/RELEASE.md).
+Those memory-only and no-delivery limits describe the browser product. A separately launched, synthetic-only HTTP exercise now lives in this repository, with local integration and application verification recorded. It uses fictional fixture files, a local mock supplier and on-disk SQLite state. It has no browser data path and no real vendor connection. Its source-specific test evidence, independent review and known limits, including an unexplained failed demo, are in [the release record](integration/RELEASE.md).
 
 ## Primary workflow
 

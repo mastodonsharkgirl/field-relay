@@ -1,0 +1,11 @@
+
+> field-relay@1.0.0 integration:demo
+> node integration/launch.ts --scripted
+
+(node:47788) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Exercise failure was retained in the saved report.
+Synthetic local exercise: run-c319693a-a3a5-4733-9ee7-946ac09408cb
+Reports: C:\Users\Kanak\Documents\Saran Websites\repos\field-relay\.worktrees\mock-http\.local\integration\run-c319693a-a3a5-4733-9ee7-946ac09408cb\reports
+failed: exercise-interrupted (verified orders unknown)
+Overall verified result: failed

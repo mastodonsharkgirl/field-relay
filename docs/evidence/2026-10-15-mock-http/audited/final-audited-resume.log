@@ -1,0 +1,12 @@
+
+> field-relay@1.0.0 integration:demo
+> node integration/launch.ts --scripted --resume run-***
+
+(node:38064) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Synthetic local exercise: run-a1d8087d-085d-4604-9218-7449d396ac57
+Reports: C:\Users\Kanak\Documents\Saran Websites\repos\field-relay\.worktrees\mock-http\.local\integration\run-a1d8087d-085d-4604-9218-7449d396ac57\reports
+passed: resume-0007 (verified orders 1)
+passed: resume-O-9 (verified orders 0)
+passed: resume-O-10 (verified orders 1)
+Overall verified result: passed

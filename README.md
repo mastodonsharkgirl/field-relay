@@ -10,7 +10,7 @@ The repository also contains two separate fictional learning exercises: the exis
 
 ## Local HTTP exercise
 
-Local verification, 15 October 2026: integration aggregation, application QA and clean scripted walkthrough/resume have passed. Scoped implementation review is approved; final whole-branch review is recorded in the [release record](docs/integration/RELEASE.md). This is a synthetic local prototype, not a production release.
+Local verification, 15 October 2026: integration aggregation, application QA and clean scripted walkthrough/resume have passed at the source commits recorded in the [release record](docs/integration/RELEASE.md). Independent final review is complete with no remaining findings. One unexplained demo stop before admission is preserved alongside its successful repeat. This is a synthetic local prototype, not a production release.
 
 Prerequisites: installed repository dependencies, Node 24.11 or compatible Node 25, and Python 3.14 available through the Windows `py` launcher. The tested Node 24.11 SQLite API emits an experimental warning. The lab starts a hidden Python mock supplier on an OS-assigned `127.0.0.1` port and separate Node relay processes.
 

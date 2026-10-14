@@ -1,0 +1,947 @@
+{
+  "status": "passed",
+  "schemaVersion": 1,
+  "metadata": {
+    "runId": "run-a1d8087d-085d-4604-9218-7449d396ac57",
+    "mode": "resume",
+    "scripted": true,
+    "sourceSha": "10733d171b7cc96189d305cabbb285d22d8f84a7",
+    "dirty": false,
+    "nodeVersion": "24.11.0",
+    "pythonVersion": "3.14.3",
+    "sqliteVersion": "3.50.4",
+    "os": "win32 10.0.26200",
+    "startedAt": "2026-10-14T19:43:33.033Z",
+    "finishedAt": "2026-10-14T19:43:35.534Z",
+    "timezone": "Asia/Calcutta",
+    "elapsedMs": 2517,
+    "credentialScanPassed": true,
+    "cleanupVerified": true,
+    "commands": [
+      "node integration/launch.ts --scripted --resume run-a1d8087d-085d-4604-9218-7449d396ac57"
+    ],
+    "fixtureHashes": {
+      "northstar": "de9435a1314739d15df17e6a6b3b7fb16558660fec02ee2a90832bcec7c91ca5",
+      "orbit": "9d6a82ac0362ee9563a73315ef79364fccc8976b22984c9c04e4dc2dce2702a4"
+    }
+  },
+  "jobs": [
+    {
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "vendorStoreId": "store-970b08610186472f19d95a9a",
+      "approvalRevision": 1,
+      "approvalState": "approved",
+      "approvalExpiresAt": 1792007573835,
+      "holdReason": "content_conflict",
+      "postReservations": 1,
+      "getReservations": 1,
+      "firstAdmissionAt": 1792006974031,
+      "deadlineAt": 1792007004031,
+      "nextAttemptAt": null,
+      "leaseId": null,
+      "leaseExpiresAt": null,
+      "observed": "present",
+      "outcome": "delivered",
+      "order": {
+        "schemaVersion": 1,
+        "partner": "northstar",
+        "orderId": "0007",
+        "region": "North",
+        "quantity": 3,
+        "amountMinor": 4250
+      },
+      "identity": {
+        "businessKey": "[\"northstar\",\"0007\"]",
+        "canonical": "[1,\"northstar\",\"0007\",\"North\",3,4250]",
+        "payloadDigest": "f1392e79fa3c8af1021a0550c4df83c5f7c4f23c824ceaffa7afd67cb1400937",
+        "idempotencyKey": "5756eefec8edeb8364aef29e49e7d535727b7f9e518518a0517e5d6ff8191b3b"
+      },
+      "claimedReceipt": null,
+      "receipt": {
+        "schemaVersion": 1,
+        "vendorOrderId": "vendor-27ce9cea0fe19bc4df003ee1",
+        "idempotencyKey": "5756eefec8edeb8364aef29e49e7d535727b7f9e518518a0517e5d6ff8191b3b",
+        "businessKey": "[\"northstar\",\"0007\"]",
+        "payloadDigest": "f1392e79fa3c8af1021a0550c4df83c5f7c4f23c824ceaffa7afd67cb1400937",
+        "committedAt": "2026-10-14T19:42:54.093Z",
+        "storeId": "store-970b08610186472f19d95a9a",
+        "order": {
+          "schemaVersion": 1,
+          "partner": "northstar",
+          "orderId": "0007",
+          "region": "North",
+          "quantity": 3,
+          "amountMinor": 4250
+        }
+      }
+    },
+    {
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "vendorStoreId": "store-970b08610186472f19d95a9a",
+      "approvalRevision": 2,
+      "approvalState": "revoked",
+      "approvalExpiresAt": null,
+      "holdReason": "deadline_expired",
+      "postReservations": 1,
+      "getReservations": 1,
+      "firstAdmissionAt": 1792006977503,
+      "deadlineAt": 1792007007503,
+      "nextAttemptAt": null,
+      "leaseId": null,
+      "leaseExpiresAt": null,
+      "observed": "absent",
+      "outcome": "retryable",
+      "order": {
+        "schemaVersion": 1,
+        "partner": "orbit",
+        "orderId": "O-9",
+        "region": "South",
+        "quantity": 10000,
+        "amountMinor": 99999999999
+      },
+      "identity": {
+        "businessKey": "[\"orbit\",\"O-9\"]",
+        "canonical": "[1,\"orbit\",\"O-9\",\"South\",10000,99999999999]",
+        "payloadDigest": "c95724fdfcf3d9c46291753d4039f18c7cdf8034a940db4cc043ec22aa0d73b3",
+        "idempotencyKey": "964f268052a80b062fc531a16f0859743b25ca315f5ba55c75d00c09c871ad34"
+      },
+      "claimedReceipt": null,
+      "receipt": null
+    },
+    {
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "vendorStoreId": "store-970b08610186472f19d95a9a",
+      "approvalRevision": 2,
+      "approvalState": "revoked",
+      "approvalExpiresAt": null,
+      "holdReason": null,
+      "postReservations": 1,
+      "getReservations": 1,
+      "firstAdmissionAt": 1792006980364,
+      "deadlineAt": 1792007010364,
+      "nextAttemptAt": null,
+      "leaseId": null,
+      "leaseExpiresAt": null,
+      "observed": "present",
+      "outcome": "delivered",
+      "order": {
+        "schemaVersion": 1,
+        "partner": "orbit",
+        "orderId": "O-10",
+        "region": "Central",
+        "quantity": 1,
+        "amountMinor": 50000
+      },
+      "identity": {
+        "businessKey": "[\"orbit\",\"O-10\"]",
+        "canonical": "[1,\"orbit\",\"O-10\",\"Central\",1,50000]",
+        "payloadDigest": "386d7b255fba7aa060e42a9cf48be3dce95f73043155f01465441c56f1e87a51",
+        "idempotencyKey": "32ca92b6ca3aa02c967d40f8dda794a9f8291898b7939519deb4073e05ea4722"
+      },
+      "claimedReceipt": {
+        "schemaVersion": 1,
+        "vendorOrderId": "vendor-3ee2ef1e28c05dce20f9dd78",
+        "idempotencyKey": "32ca92b6ca3aa02c967d40f8dda794a9f8291898b7939519deb4073e05ea4722",
+        "businessKey": "[\"orbit\",\"O-10\"]",
+        "payloadDigest": "386d7b255fba7aa060e42a9cf48be3dce95f73043155f01465441c56f1e87a51",
+        "committedAt": "2026-10-14T19:43:00.639Z",
+        "storeId": "store-970b08610186472f19d95a9a",
+        "order": {
+          "schemaVersion": 1,
+          "partner": "orbit",
+          "orderId": "O-10",
+          "region": "Central",
+          "quantity": 1,
+          "amountMinor": 50000
+        },
+        "replayed": false
+      },
+      "receipt": {
+        "schemaVersion": 1,
+        "vendorOrderId": "vendor-3ee2ef1e28c05dce20f9dd78",
+        "idempotencyKey": "32ca92b6ca3aa02c967d40f8dda794a9f8291898b7939519deb4073e05ea4722",
+        "businessKey": "[\"orbit\",\"O-10\"]",
+        "payloadDigest": "386d7b255fba7aa060e42a9cf48be3dce95f73043155f01465441c56f1e87a51",
+        "committedAt": "2026-10-14T19:43:00.639Z",
+        "storeId": "store-970b08610186472f19d95a9a",
+        "order": {
+          "schemaVersion": 1,
+          "partner": "orbit",
+          "orderId": "O-10",
+          "region": "Central",
+          "quantity": 1,
+          "amountMinor": 50000
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "enqueued",
+      "at": 1792006973679,
+      "approvalRevision": 0,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 2,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "approved",
+      "at": 1792006973835,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "harness",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 3,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "post_reserved",
+      "at": 1792006974031,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "75fc3794-eda7-45a5-b89d-d87ec52297f3"
+    },
+    {
+      "sequence": 4,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "post_settled",
+      "at": 1792006974805,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": null,
+      "nextAttemptAt": 1792006974882,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "75fc3794-eda7-45a5-b89d-d87ec52297f3"
+    },
+    {
+      "sequence": 5,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "retry_scheduled",
+      "at": 1792006974805,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": null,
+      "nextAttemptAt": 1792006974882,
+      "reason": "full_jitter",
+      "scheduledDelayMs": 77,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "75fc3794-eda7-45a5-b89d-d87ec52297f3"
+    },
+    {
+      "sequence": 6,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "read_reserved",
+      "at": 1792006974896,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "01f7ef1f-4a00-4b49-a3d5-79875d040ac0"
+    },
+    {
+      "sequence": 7,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "read_settled",
+      "at": 1792006974936,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "delivered",
+      "httpStatus": 200,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "present",
+      "vendorOrderId": "vendor-27ce9cea0fe19bc4df003ee1",
+      "requestId": "01f7ef1f-4a00-4b49-a3d5-79875d040ac0"
+    },
+    {
+      "sequence": 8,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "held",
+      "at": 1792006975425,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "content_conflict",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 9,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "enqueued",
+      "at": 1792006975842,
+      "approvalRevision": 0,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 10,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "enqueued",
+      "at": 1792006975865,
+      "approvalRevision": 0,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 11,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "approved",
+      "at": 1792006977087,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "harness",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 12,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "post_reserved",
+      "at": 1792006977503,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "6efc4114-c320-42ab-a3d6-7890ffdf0262"
+    },
+    {
+      "sequence": 13,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "post_settled",
+      "at": 1792006977579,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": 429,
+      "nextAttemptAt": 1792006978579,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "6efc4114-c320-42ab-a3d6-7890ffdf0262"
+    },
+    {
+      "sequence": 14,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "retry_scheduled",
+      "at": 1792006977579,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": 429,
+      "nextAttemptAt": 1792006978579,
+      "reason": "retry_after",
+      "scheduledDelayMs": 1000,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "6efc4114-c320-42ab-a3d6-7890ffdf0262"
+    },
+    {
+      "sequence": 15,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "revoked",
+      "at": 1792006977749,
+      "approvalRevision": 2,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "authorization_revoked",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 16,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "read_reserved",
+      "at": 1792006978585,
+      "approvalRevision": 2,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "91e2f4de-7ed5-4daa-ba75-d598438c1e8f"
+    },
+    {
+      "sequence": 17,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "read_settled",
+      "at": 1792006978627,
+      "approvalRevision": 2,
+      "attempt": 1,
+      "outcome": "retryable",
+      "httpStatus": 404,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "absent",
+      "vendorOrderId": null,
+      "requestId": "91e2f4de-7ed5-4daa-ba75-d598438c1e8f"
+    },
+    {
+      "sequence": 18,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "approved",
+      "at": 1792006979973,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "harness",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 19,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "post_reserved",
+      "at": 1792006980364,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "f3f1bb51-f53f-4f65-8084-a3c1d3279f98"
+    },
+    {
+      "sequence": 20,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "revoked",
+      "at": 1792006980610,
+      "approvalRevision": 2,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "authorization_revoked",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 21,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "post_settled",
+      "at": 1792006980669,
+      "approvalRevision": 1,
+      "attempt": 1,
+      "outcome": "unknown",
+      "httpStatus": 201,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "unknown",
+      "vendorOrderId": null,
+      "requestId": "f3f1bb51-f53f-4f65-8084-a3c1d3279f98"
+    },
+    {
+      "sequence": 22,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "read_reserved",
+      "at": 1792006980674,
+      "approvalRevision": 2,
+      "attempt": 1,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": "9180a07b-8cfe-4ec6-8b00-21e9c8d89554"
+    },
+    {
+      "sequence": 23,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "read_settled",
+      "at": 1792006980702,
+      "approvalRevision": 2,
+      "attempt": 1,
+      "outcome": "delivered",
+      "httpStatus": 200,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "present",
+      "vendorOrderId": "vendor-3ee2ef1e28c05dce20f9dd78",
+      "requestId": "9180a07b-8cfe-4ec6-8b00-21e9c8d89554"
+    },
+    {
+      "sequence": 24,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "operator_inspection",
+      "at": 1792006980935,
+      "approvalRevision": 2,
+      "attempt": null,
+      "outcome": "delivered",
+      "httpStatus": 200,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "present",
+      "vendorOrderId": "vendor-3ee2ef1e28c05dce20f9dd78",
+      "requestId": "8f82a9b7-9f5f-447c-b017-ba6e5efa73ec"
+    },
+    {
+      "sequence": 25,
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "kind": "operator_inspection",
+      "at": 1792007013921,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": "delivered",
+      "httpStatus": 200,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "present",
+      "vendorOrderId": "vendor-27ce9cea0fe19bc4df003ee1",
+      "requestId": "8a21499a-4604-4593-88bd-70fa97490ab6"
+    },
+    {
+      "sequence": 26,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "held",
+      "at": 1792007014211,
+      "approvalRevision": 2,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "deadline_expired",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 27,
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "kind": "operator_inspection",
+      "at": 1792007014476,
+      "approvalRevision": 2,
+      "attempt": null,
+      "outcome": "retryable",
+      "httpStatus": 404,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "absent",
+      "vendorOrderId": null,
+      "requestId": "642f4d18-2dc0-419f-9239-176a338bd12b"
+    },
+    {
+      "sequence": 28,
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "kind": "operator_inspection",
+      "at": 1792007015108,
+      "approvalRevision": 2,
+      "attempt": null,
+      "outcome": "delivered",
+      "httpStatus": 200,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": "present",
+      "vendorOrderId": "vendor-3ee2ef1e28c05dce20f9dd78",
+      "requestId": "2b8ef554-24c0-4fe3-8cde-28251f62dd2a"
+    }
+  ],
+  "vendorReadback": {
+    "readAt": "2026-10-14T19:43:35.214Z",
+    "httpStatus": 200,
+    "storeId": "store-970b08610186472f19d95a9a",
+    "count": 2,
+    "inspectionRequests": 12,
+    "verification": "verified",
+    "orders": [
+      {
+        "schemaVersion": 1,
+        "vendorOrderId": "vendor-27ce9cea0fe19bc4df003ee1",
+        "idempotencyKey": "5756eefec8edeb8364aef29e49e7d535727b7f9e518518a0517e5d6ff8191b3b",
+        "businessKey": "[\"northstar\",\"0007\"]",
+        "payloadDigest": "f1392e79fa3c8af1021a0550c4df83c5f7c4f23c824ceaffa7afd67cb1400937",
+        "committedAt": "2026-10-14T19:42:54.093Z",
+        "storeId": "store-970b08610186472f19d95a9a",
+        "order": {
+          "schemaVersion": 1,
+          "partner": "northstar",
+          "orderId": "0007",
+          "region": "North",
+          "quantity": 3,
+          "amountMinor": 4250
+        }
+      },
+      {
+        "schemaVersion": 1,
+        "vendorOrderId": "vendor-3ee2ef1e28c05dce20f9dd78",
+        "idempotencyKey": "32ca92b6ca3aa02c967d40f8dda794a9f8291898b7939519deb4073e05ea4722",
+        "businessKey": "[\"orbit\",\"O-10\"]",
+        "payloadDigest": "386d7b255fba7aa060e42a9cf48be3dce95f73043155f01465441c56f1e87a51",
+        "committedAt": "2026-10-14T19:43:00.639Z",
+        "storeId": "store-970b08610186472f19d95a9a",
+        "order": {
+          "schemaVersion": 1,
+          "partner": "orbit",
+          "orderId": "O-10",
+          "region": "Central",
+          "quantity": 1,
+          "amountMinor": 50000
+        }
+      }
+    ]
+  },
+  "scenarioResults": [
+    {
+      "jobId": "b6fc163a-68aa-4850-a4af-bd8109c4e3a0",
+      "eventSequences": [25],
+      "finalState": "approved / delivered / present / content_conflict",
+      "name": "resume-0007",
+      "status": "passed",
+      "reason": "Verified local outcome matches the scenario.",
+      "expectedCount": 1,
+      "observedCount": 1,
+      "exactPayload": true,
+      "postCount": 1,
+      "automaticGetCount": 1,
+      "elapsedMs": 539,
+      "wirePostCount": 1,
+      "wireGetCount": 9,
+      "replayAcknowledgments": 0,
+      "checks": [
+        {
+          "name": "verified order count",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "exact original payload (null when absent)",
+          "expected": true,
+          "observed": true,
+          "mode": "equal"
+        },
+        {
+          "name": "required final relay state",
+          "expected": true,
+          "observed": true,
+          "mode": "equal"
+        },
+        {
+          "name": "wire POST delta equals admitted delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "reserved POST delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "at-most"
+        },
+        {
+          "name": "automatic GET delta",
+          "expected": 5,
+          "observed": 0,
+          "mode": "at-most"
+        },
+        {
+          "name": "operator GET delta",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "evidence GETs for this key",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "wire GET delta including evidence",
+          "expected": 2,
+          "observed": 2,
+          "mode": "equal"
+        },
+        {
+          "name": "replay acknowledgment delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "lifetime POST reservations",
+          "expected": 3,
+          "observed": 1,
+          "mode": "at-most"
+        },
+        {
+          "name": "lifetime automatic GET reservations",
+          "expected": 6,
+          "observed": 1,
+          "mode": "at-most"
+        }
+      ]
+    },
+    {
+      "jobId": "94174cd9-b652-40cd-aefd-bc096e815ba9",
+      "eventSequences": [26, 27],
+      "finalState": "revoked / retryable / absent / deadline_expired",
+      "name": "resume-O-9",
+      "status": "passed",
+      "reason": "Verified local outcome matches the scenario.",
+      "expectedCount": 0,
+      "observedCount": 0,
+      "exactPayload": null,
+      "postCount": 1,
+      "automaticGetCount": 1,
+      "elapsedMs": 567,
+      "wirePostCount": 1,
+      "wireGetCount": 2,
+      "replayAcknowledgments": 0,
+      "checks": [
+        {
+          "name": "verified order count",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "exact original payload (null when absent)",
+          "expected": null,
+          "observed": null,
+          "mode": "equal"
+        },
+        {
+          "name": "required final relay state",
+          "expected": true,
+          "observed": true,
+          "mode": "equal"
+        },
+        {
+          "name": "wire POST delta equals admitted delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "reserved POST delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "at-most"
+        },
+        {
+          "name": "automatic GET delta",
+          "expected": 5,
+          "observed": 0,
+          "mode": "at-most"
+        },
+        {
+          "name": "operator GET delta",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "evidence GETs for this key",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "wire GET delta including evidence",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "replay acknowledgment delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "lifetime POST reservations",
+          "expected": 3,
+          "observed": 1,
+          "mode": "at-most"
+        },
+        {
+          "name": "lifetime automatic GET reservations",
+          "expected": 6,
+          "observed": 1,
+          "mode": "at-most"
+        }
+      ]
+    },
+    {
+      "jobId": "e1b7c71f-2074-4c2a-9be0-780485e665d1",
+      "eventSequences": [28],
+      "finalState": "revoked / delivered / present / no hold",
+      "name": "resume-O-10",
+      "status": "passed",
+      "reason": "Verified local outcome matches the scenario.",
+      "expectedCount": 1,
+      "observedCount": 1,
+      "exactPayload": true,
+      "postCount": 1,
+      "automaticGetCount": 1,
+      "elapsedMs": 631,
+      "wirePostCount": 1,
+      "wireGetCount": 8,
+      "replayAcknowledgments": 0,
+      "checks": [
+        {
+          "name": "verified order count",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "exact original payload (null when absent)",
+          "expected": true,
+          "observed": true,
+          "mode": "equal"
+        },
+        {
+          "name": "required final relay state",
+          "expected": true,
+          "observed": true,
+          "mode": "equal"
+        },
+        {
+          "name": "wire POST delta equals admitted delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "reserved POST delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "at-most"
+        },
+        {
+          "name": "automatic GET delta",
+          "expected": 5,
+          "observed": 0,
+          "mode": "at-most"
+        },
+        {
+          "name": "operator GET delta",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "evidence GETs for this key",
+          "expected": 1,
+          "observed": 1,
+          "mode": "equal"
+        },
+        {
+          "name": "wire GET delta including evidence",
+          "expected": 2,
+          "observed": 2,
+          "mode": "equal"
+        },
+        {
+          "name": "replay acknowledgment delta",
+          "expected": 0,
+          "observed": 0,
+          "mode": "equal"
+        },
+        {
+          "name": "lifetime POST reservations",
+          "expected": 3,
+          "observed": 1,
+          "mode": "at-most"
+        },
+        {
+          "name": "lifetime automatic GET reservations",
+          "expected": 6,
+          "observed": 1,
+          "mode": "at-most"
+        }
+      ]
+    }
+  ]
+}

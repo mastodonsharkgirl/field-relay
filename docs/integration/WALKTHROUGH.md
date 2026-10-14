@@ -64,5 +64,8 @@ The managed CLI also accepts `fixture northstar`, `fixture orbit`, `approve JOB_
 - `dirty: true` means the run used uncommitted changes alongside the recorded base SHA. Keep that qualification with copied results.
 - Every scenario includes expected-versus-observed checks, its own elapsed time, the related audit sequence numbers, and final relay state. Wire GET deltas account separately for automatic verification, operator inspection and evidence inspection.
 - A successful scenario cannot override unavailable or mismatched final readback. Overall success also requires exact receipts, completed cleanup and credential scans of the owned artifacts and both report formats.
+- `retry_scheduled` records the policy reason and due time saved with settlement; `scheduledDelayMs` is derived from the stored timestamps. `retry_schedule_ignored` records a proposal that did not become the effective schedule. A null delay with an unrepresentable-wait reason blocks automatic retries.
+
+The [latest evidence](../evidence/2026-10-15-mock-http/audited/README.md) includes an initial demo that stopped before admission and an unchanged successful repeat. The failed attempt's root cause is not known. If a local run reports failure, inspect its saved evidence and state before deciding whether to resume; a successful later run does not turn the earlier result into a pass.
 
 The launcher stops only owned children on normal exit and its SIGINT handler. The focused handler test injects a SIGINT event; it is not a manual physical-keyboard Ctrl+C certification. State and reports are preserved. A partial startup directory is not silently repaired; start a new named run or investigate preserved state. No reset or recursive deletion command is included.

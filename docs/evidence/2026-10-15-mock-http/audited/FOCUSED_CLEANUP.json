@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "project": "Field Relay",
+  "checkedAt": "2026-10-14T19:49:44.6191554Z",
+  "sourceSha": "10733d171b7cc96189d305cabbb285d22d8f84a7",
+  "heavyComputeSlotReleased": true,
+  "fullBuildBrowserOrAggregateRepeatedAfterRelease": false,
+  "remainingOwnedProcessCandidates": [],
+  "qaPort4796Closed": true,
+  "reportedCleanup": [
+    {
+      "report": "walkthrough",
+      "status": "passed",
+      "sourceSha": "10733d171b7cc96189d305cabbb285d22d8f84a7",
+      "cleanSource": true,
+      "cleanupVerified": true,
+      "credentialScanPassed": true,
+      "verifiedOrders": 2,
+      "readback": "verified",
+      "elapsedMs": 8299,
+      "scenarios": 5
+    },
+    {
+      "report": "resume",
+      "status": "passed",
+      "sourceSha": "10733d171b7cc96189d305cabbb285d22d8f84a7",
+      "cleanSource": true,
+      "cleanupVerified": true,
+      "credentialScanPassed": true,
+      "verifiedOrders": 2,
+      "readback": "verified",
+      "elapsedMs": 2517,
+      "scenarios": 3
+    },
+    {
+      "report": "failed-initial",
+      "status": "failed",
+      "sourceSha": "10733d171b7cc96189d305cabbb285d22d8f84a7",
+      "cleanSource": true,
+      "cleanupVerified": true,
+      "credentialScanPassed": true,
+      "verifiedOrders": 0,
+      "readback": "verified",
+      "elapsedMs": 6035,
+      "scenarios": 1
+    }
+  ],
+  "scope": "Supplemental cleanup readback after bounded single-worker repairs and local demo attempts. Original heavy-slot release receipt remains historical.",
+  "limitations": [
+    "Initial demo failed before admission; no root cause established.",
+    "Process scan finds absolute checkout command-line matches; each saved runtime report separately verifies owned child closure and supplier port refusal.",
+    "No push or deployment."
+  ]
+}

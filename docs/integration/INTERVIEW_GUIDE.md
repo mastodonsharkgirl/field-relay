@@ -1,6 +1,6 @@
 # Explain Field Relay in an interview
 
-This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. Local integration, build and browser checks have passed; use the [release record](RELEASE.md) for current review status and the [saved walkthrough](../evidence/2026-10-15-mock-http/final/walkthrough.md) for measured outcomes.
+This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. Local integration, build and browser checks have passed; use the [release record](RELEASE.md) for current review status and the [saved evidence](../evidence/2026-10-15-mock-http/audited/README.md) for measured outcomes, including the initial failed attempt and successful repeat.
 
 ## Start with the problem
 
@@ -78,6 +78,8 @@ The important distinction is between **the reply arriving** and **the order bein
 **Why SQLite?** It provides local transactions and persistent state without installing a database service. It makes process-restart and atomic-update tests practical. This is not a demonstrated distributed queue, cloud database or high-availability design.
 
 **What did you personally do?** Describe only what you can defend: the problem framing, decisions you reviewed, tests you observed, and explanations you now understand. State that AI helped generate and review code. Do not claim to have independently written every line or operated this in production.
+
+**What failed in your own testing?** One final demo stopped before any send was admitted. Its saved report verified zero supplier orders and kept the result as failed. An unchanged repeat and restart recovery passed, but the initial cause is still unknown. That is a limitation to investigate, not evidence of perfect reliability. The useful lesson is to distinguish a safe stop from a successful workflow and retain both results.
 
 **What would you ask a real customer first?** Who owns the order ID? How long does the supplier remember duplicate keys? Is readback authoritative? Which errors can be retried? Who approves changes and handles unresolved cases? What happens if cancellation arrives after dispatch? Which data fields are actually necessary?
 

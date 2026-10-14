@@ -1,0 +1,121 @@
+{
+  "status": "failed",
+  "schemaVersion": 1,
+  "metadata": {
+    "runId": "run-c319693a-a3a5-4733-9ee7-946ac09408cb",
+    "mode": "new",
+    "scripted": true,
+    "sourceSha": "10733d171b7cc96189d305cabbb285d22d8f84a7",
+    "dirty": false,
+    "nodeVersion": "24.11.0",
+    "pythonVersion": "3.14.3",
+    "sqliteVersion": "3.50.4",
+    "os": "win32 10.0.26200",
+    "startedAt": "2026-10-14T19:41:17.423Z",
+    "finishedAt": "2026-10-14T19:41:23.446Z",
+    "timezone": "Asia/Calcutta",
+    "elapsedMs": 6035,
+    "credentialScanPassed": true,
+    "cleanupVerified": true,
+    "commands": ["node integration/launch.ts --scripted"],
+    "fixtureHashes": {
+      "northstar": "de9435a1314739d15df17e6a6b3b7fb16558660fec02ee2a90832bcec7c91ca5",
+      "orbit": "9d6a82ac0362ee9563a73315ef79364fccc8976b22984c9c04e4dc2dce2702a4"
+    }
+  },
+  "jobs": [
+    {
+      "jobId": "469fcb08-3e9a-4fb2-8f21-954ef0588123",
+      "vendorStoreId": "store-db7dbc9bcc1e070da1c9646f",
+      "approvalRevision": 1,
+      "approvalState": "approved",
+      "approvalExpiresAt": 1792007478168,
+      "holdReason": null,
+      "postReservations": 0,
+      "getReservations": 0,
+      "firstAdmissionAt": null,
+      "deadlineAt": null,
+      "nextAttemptAt": null,
+      "leaseId": null,
+      "leaseExpiresAt": null,
+      "observed": "unknown",
+      "outcome": "pending",
+      "order": {
+        "schemaVersion": 1,
+        "partner": "northstar",
+        "orderId": "0007",
+        "region": "North",
+        "quantity": 3,
+        "amountMinor": 4250
+      },
+      "identity": {
+        "businessKey": "[\"northstar\",\"0007\"]",
+        "canonical": "[1,\"northstar\",\"0007\",\"North\",3,4250]",
+        "payloadDigest": "f1392e79fa3c8af1021a0550c4df83c5f7c4f23c824ceaffa7afd67cb1400937",
+        "idempotencyKey": "5756eefec8edeb8364aef29e49e7d535727b7f9e518518a0517e5d6ff8191b3b"
+      },
+      "claimedReceipt": null,
+      "receipt": null
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "jobId": "469fcb08-3e9a-4fb2-8f21-954ef0588123",
+      "kind": "enqueued",
+      "at": 1792006878020,
+      "approvalRevision": 0,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": null,
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    },
+    {
+      "sequence": 2,
+      "jobId": "469fcb08-3e9a-4fb2-8f21-954ef0588123",
+      "kind": "approved",
+      "at": 1792006878168,
+      "approvalRevision": 1,
+      "attempt": null,
+      "outcome": null,
+      "httpStatus": null,
+      "nextAttemptAt": null,
+      "reason": "harness",
+      "scheduledDelayMs": null,
+      "observed": null,
+      "vendorOrderId": null,
+      "requestId": null
+    }
+  ],
+  "vendorReadback": {
+    "readAt": "2026-10-14T19:41:23.241Z",
+    "httpStatus": 200,
+    "storeId": "store-db7dbc9bcc1e070da1c9646f",
+    "count": 0,
+    "inspectionRequests": 163,
+    "verification": "verified",
+    "orders": []
+  },
+  "scenarioResults": [
+    {
+      "name": "exercise-interrupted",
+      "status": "failed",
+      "reason": "Exercise did not complete; inspect saved state before retrying.",
+      "expectedCount": 0,
+      "observedCount": null,
+      "exactPayload": null,
+      "postCount": 0,
+      "automaticGetCount": 0,
+      "elapsedMs": 5818,
+      "wirePostCount": null,
+      "wireGetCount": null,
+      "replayAcknowledgments": null,
+      "checks": []
+    }
+  ]
+}
