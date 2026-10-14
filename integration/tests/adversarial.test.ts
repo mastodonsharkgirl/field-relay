@@ -6,6 +6,47 @@ import { join } from 'node:path';
 import { startRuntime, runDirectory, runsRoot, controlRequest } from '../runtime.ts';
 import { readVendorList, buildEvidence } from '../relay/evidence.ts';
 
+test('final unverified supplier evidence cannot produce a passing run', () => {
+  const input = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../docs/evidence/2026-10-15-mock-http-checkpoint/focused-walkthrough.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  input.vendorReadback = {
+    ...input.vendorReadback,
+    verification: 'unavailable',
+    count: null,
+    orders: [],
+  };
+  assert.equal(Reflect.get(buildEvidence(input), 'status'), 'failed');
+});
+
+test('scenario measurements override a stale pass label and appear in the human report', async () => {
+  const { renderEvidence } = await import('../relay/evidence.ts');
+  const input = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../docs/evidence/2026-10-15-mock-http-checkpoint/focused-walkthrough.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  input.scenarioResults[0].checks = [
+    { name: 'wire POST delta', expected: 1, observed: 2, mode: 'equal' },
+  ];
+  const evidence = buildEvidence(input);
+  assert.equal(evidence.scenarioResults[0].status, 'failed');
+  assert.equal(evidence.status, 'failed');
+  const markdown = renderEvidence(evidence).markdown;
+  assert.match(markdown, /wire POST delta/);
+  assert.match(markdown, /failed/);
+});
+
 test('overlapping cleanup calls both wait for the owned processes to close', async () => {
   const lab = await startRuntime({ mode: 'new' });
   const completed: string[] = [];
@@ -40,6 +81,11 @@ test('coordinated restart rotates credentials and rejects the prior session', as
     );
     assert.equal(lab.scanCredentials([JSON.stringify({ runId: lab.runId })]), true);
     assert.equal(lab.scanCredentials([previous.token]), false);
+    const scan = await lab.scanArtifacts(['safe synthetic report']);
+    assert.equal(scan.passed, true);
+    assert.ok(scan.files >= 3);
+    assert.ok(scan.bytes > 0);
+    assert.equal((await lab.scanArtifacts([previous.token])).passed, false);
     const report = await lab.command(['report']);
     assert.equal(report.code, 0);
     assert.equal(lab.scanCredentials([report.stdout, report.stderr]), true);
@@ -71,12 +117,25 @@ test('resume refuses missing or changed state and preserves the files', async ()
   const manifestPath = join(lab.directory, 'manifest.json');
   const original = readFileSync(manifestPath, 'utf8');
   const database = readFileSync(join(lab.directory, 'vendor/vendor.sqlite'));
+  let failedPort = 0;
   try {
     writeFileSync(
       manifestPath,
       JSON.stringify({ schemaVersion: 1, runId: lab.runId, storeId: 'store-deadbeef' }),
     );
-    await assert.rejects(startRuntime({ mode: 'resume', runId: lab.runId }), /startup failed/);
+    await assert.rejects(startRuntime({ mode: 'resume', runId: lab.runId }), (error: unknown) => {
+      const failure = error as Error & {
+        cleanup?: { pids: number[]; port: number; verified: boolean };
+      };
+      assert.match(failure.message, /startup failed/);
+      assert.equal(failure.cleanup?.verified, true);
+      assert.ok(failure.cleanup!.pids.length > 0);
+      for (const pid of failure.cleanup!.pids) assert.throws(() => process.kill(pid, 0));
+      assert.ok(failure.cleanup!.port > 0);
+      failedPort = failure.cleanup!.port;
+      return true;
+    });
+    await assert.rejects(controlRequest({ ...lab.connection, port: failedPort }, '/v1/health'));
     assert.deepEqual(readFileSync(join(lab.directory, 'vendor/vendor.sqlite')), database);
     assert.equal(JSON.parse(readFileSync(manifestPath, 'utf8')).storeId, 'store-deadbeef');
   } finally {
@@ -125,6 +184,7 @@ test('walkthrough holds changed payload, stops after 429 revocation and reports 
   );
   assert.equal(evidence.metadata.credentialScanPassed, true);
   assert.equal(evidence.metadata.cleanupVerified, true);
+  assert.equal(evidence.status, 'passed');
   const projected = buildEvidence({
     ...evidence,
     metadata: { ...evidence.metadata, unexpectedSecret: 'drop-me' },

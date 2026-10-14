@@ -7,6 +7,119 @@ import { identify } from '../relay/contract.ts';
 import { waitUntil, controlRequest } from '../runtime.ts';
 import { readVendorList } from '../relay/evidence.ts';
 
+for (const stopAt of ['before-admission', 'admission'] as const) {
+  test('changed content at ' + stopAt + ' preserves the exact admitted HTTP body', async () => {
+    const lab = await startLab({ mode: 'new' });
+    const store = openRelayStore(lab.relayPath, 'resume');
+    try {
+      const original = loadFixture('northstar').orders[0];
+      const key = identify(original).idempotencyKey;
+      const worker = lab.startRelay({ fixture: 'northstar', scripted: true, stopAt });
+      const { jobId } = await worker.admitted;
+      const approvedRevision = store.snapshot(jobId).approvalRevision;
+      store.enqueue(
+        { ...original, quantity: original.quantity + 1 },
+        lab.connection.storeId,
+        Date.now(),
+      );
+      worker.child.send({ continue: true });
+      assert.equal((await worker.result).code, 0);
+      assert.equal((await lab.command(['dispatch', jobId])).code, 0);
+      const job = store.snapshot(jobId);
+      assert.equal(job.holdReason, 'content_conflict');
+      assert.deepEqual(job.order, original);
+      const readback = await readVendorList(lab.connection);
+      assert.equal(readback.count, stopAt === 'before-admission' ? 0 : 1);
+      const observed = await lab.observeFault(key);
+      assert.equal(
+        (observed.lifetimeRequestCount as { post: number }).post,
+        stopAt === 'before-admission' ? 0 : 1,
+      );
+      const admission = store.events(jobId).find((event) => event.kind === 'post_reserved');
+      if (stopAt === 'admission') {
+        assert.equal(admission?.approvalRevision, approvedRevision);
+        assert.deepEqual(readback.orders[0].order, original);
+      } else assert.equal(admission, undefined);
+    } finally {
+      store.close();
+      await lab.stop();
+    }
+  });
+}
+
+test('launcher resume recovers a committed order missing its local receipt', async () => {
+  const lab = await startLab({ mode: 'new' });
+  const store = openRelayStore(lab.relayPath, 'resume');
+  let deadline: number | null;
+  try {
+    const key = identify(loadFixture('northstar').orders[0]).idempotencyKey;
+    await lab.configureFault(key, ['hold_after_commit']);
+    const worker = lab.startRelay({ fixture: 'northstar', scripted: true, stopAt: 'commit' });
+    const { jobId } = await worker.admitted;
+    await waitUntil(
+      async () => (await controlRequest(lab.connection, '/v1/orders')).body.count === 1,
+    );
+    await worker.stop();
+    const before = store.snapshot(jobId);
+    assert.equal(before.receipt, null);
+    deadline = before.deadlineAt;
+    await waitUntil(() => Date.now() > (before.leaseExpiresAt ?? 0), 6_000);
+  } finally {
+    store.close();
+    await lab.stop();
+  }
+  const { launchExercise } = await import('../launch.ts');
+  const evidence = await launchExercise({
+    mode: 'resume',
+    runId: lab.runId,
+    scripted: true,
+    scenario: 'response-loss',
+  });
+  assert.equal(evidence.status, 'passed');
+  assert.equal(evidence.scenarioResults[0].expectedCount, 1);
+  assert.equal(evidence.jobs[0].postReservations, 1);
+  assert.equal(evidence.jobs[0].deadlineAt, deadline);
+});
+
+for (const fault of ['malformed_success_absent', '429_repeat']) {
+  test('changed content stays held after ' + fault, async () => {
+    const lab = await startLab({ mode: 'new' });
+    const store = openRelayStore(lab.relayPath, 'resume');
+    try {
+      const original = loadFixture('northstar').orders[0];
+      const key = identify(original).idempotencyKey;
+      await lab.configureFault(key, [fault]);
+      const worker = lab.startRelay({ fixture: 'northstar', scripted: true });
+      const { jobId } = await worker.admitted;
+      assert.equal((await worker.result).code, 0);
+      const before = store.snapshot(jobId);
+      if (fault === '429_repeat') assert.equal(before.holdReason, 'post_budget_exhausted');
+      else assert.equal(before.outcome, 'unknown');
+      store.enqueue(
+        { ...original, amountMinor: original.amountMinor + 1 },
+        lab.connection.storeId,
+        Date.now(),
+      );
+      assert.equal((await lab.command(['dispatch', jobId])).code, 0);
+      assert.equal(store.snapshot(jobId).holdReason, 'content_conflict');
+      assert.equal(store.snapshot(jobId).postReservations, before.postReservations);
+      assert.equal((await readVendorList(lab.connection)).count, 0);
+      assert.equal(
+        (await lab.observeFault(key)).lifetimeRequestCount &&
+          store.snapshot(jobId).identity.canonical,
+        identify(original).canonical,
+      );
+      assert.equal(
+        ((await lab.observeFault(key)).lifetimeRequestCount as { post: number }).post,
+        before.postReservations,
+      );
+    } finally {
+      store.close();
+      await lab.stop();
+    }
+  });
+}
+
 for (const milestone of ['admission', 'commit'] as const) {
   test(
     'real relay crash at ' + milestone + ' retains budgets and recovers through readback',

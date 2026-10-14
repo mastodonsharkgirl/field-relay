@@ -10,7 +10,7 @@ const main = async () => {
   const [fixture, milestone] = process.argv.slice(2);
   if (
     (fixture !== 'northstar' && fixture !== 'orbit') ||
-    !['admission', 'commit', 'dispatch'].includes(milestone)
+    !['before-admission', 'admission', 'commit', 'dispatch'].includes(milestone)
   )
     throw Error('Invalid test worker options.');
   const connection = {
@@ -30,13 +30,26 @@ const main = async () => {
       process.send?.({ jobId: job.jobId });
       return await dispatch(store, job.jobId, connection, randomUUID());
     }
+    if (milestone === 'before-admission') {
+      const continued = new Promise<void>((resolveContinue) =>
+        process.once('message', () => resolveContinue()),
+      );
+      process.send?.({ jobId: job.jobId });
+      await continued;
+    }
     const admission = store.reservePost(job.jobId, randomUUID(), Date.now());
-    if (admission.kind !== 'admitted') throw Error('Test admission was blocked.');
+    if (admission.kind !== 'admitted') {
+      if (milestone === 'before-admission') return store.snapshot(job.jobId);
+      throw Error('Test admission was blocked.');
+    }
+    const continued =
+      milestone === 'admission'
+        ? new Promise<void>((resolveContinue) => {
+            process.once('message', () => resolveContinue());
+          })
+        : Promise.resolve();
     process.send?.({ jobId: job.jobId });
-    if (milestone === 'admission')
-      await new Promise<void>((resolveContinue) => {
-        process.once('message', () => resolveContinue());
-      });
+    await continued;
     const result = await exchange(connection, {
       method: 'POST',
       path: '/v1/orders',

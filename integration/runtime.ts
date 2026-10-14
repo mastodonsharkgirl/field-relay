@@ -5,6 +5,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   writeFileSync,
 } from 'node:fs';
@@ -211,6 +212,7 @@ export type Runtime = {
   releaseBarrier: (key: string) => Promise<Record<string, unknown>>;
   restartVendor: () => Promise<void>;
   scanCredentials: (contents: string[]) => boolean;
+  scanArtifacts: (contents: string[]) => Promise<{ passed: boolean; files: number; bytes: number }>;
   ownedPids: () => number[];
   stop: () => Promise<void>;
 };
@@ -256,12 +258,14 @@ export const startRuntime = async (options: {
   const credentials: string[] = [];
   const children = new Set<OwnedProcess>();
   const outputs: string[] = [];
+  const argumentsSeen: string[] = [];
   let vendor: OwnedProcess;
   let connection: VendorConnection = { port: 0, token: '', storeId: '' };
   let stopped = false;
   let stopping: Promise<void> | undefined;
   const track = (owned: OwnedProcess) => {
     children.add(owned);
+    argumentsSeen.push(...owned.child.spawnargs);
     void owned.result.then((result) => {
       outputs.push(result.stdout, result.stderr);
     });
@@ -389,7 +393,13 @@ export const startRuntime = async (options: {
       );
   } catch {
     await stop();
-    throw Error('Local lab startup failed; existing state was preserved.');
+    throw Object.assign(Error('Local lab startup failed; existing state was preserved.'), {
+      cleanup: {
+        verified: true,
+        port: connection.port,
+        pids: [...children].flatMap((owned) => (owned.child.pid ? [owned.child.pid] : [])),
+      },
+    });
   }
   const startRelay = (args: string[]) => {
     if (stopped) throw Error('Lab has stopped.');
@@ -450,8 +460,41 @@ export const startRuntime = async (options: {
     },
     scanCredentials: (contents) =>
       !credentials.some((credential) =>
-        [...contents, ...outputs].some((content) => content.includes(credential)),
+        [...contents, ...outputs, ...argumentsSeen].some((content) => content.includes(credential)),
       ),
+    scanArtifacts: async (contents) => {
+      let files = 0,
+        bytes = 0;
+      const matches = (content: Buffer) =>
+        credentials.some((value) => content.includes(Buffer.from(value)));
+      try {
+        runDirectory(runId);
+        if (
+          [...contents, ...outputs, ...argumentsSeen].some((value) => matches(Buffer.from(value)))
+        )
+          return { passed: false, files, bytes };
+        const visit = (path: string, depth: number): boolean => {
+          if (depth > 3) return false;
+          for (const name of readdirSync(path)) {
+            const file = join(path, name);
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink() || realpathSync(file).toLowerCase() !== file.toLowerCase())
+              return false;
+            if (stat.isDirectory()) {
+              if (!visit(file, depth + 1)) return false;
+            } else {
+              if (!stat.isFile() || ++files > 256 || stat.size > 32 * 1024 * 1024) return false;
+              bytes += stat.size;
+              if (bytes > 64 * 1024 * 1024 || matches(readFileSync(file))) return false;
+            }
+          }
+          return true;
+        };
+        return { passed: visit(directory, 0), files, bytes };
+      } catch {
+        return { passed: false, files, bytes };
+      }
+    },
     ownedPids: () => [...children].flatMap((owned) => (owned.child.pid ? [owned.child.pid] : [])),
     stop,
   };

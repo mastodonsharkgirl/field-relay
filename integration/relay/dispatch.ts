@@ -266,6 +266,7 @@ export const dispatch = async (
     }
     if (
       snapshot.holdReason === 'deferred_outside_deadline' ||
+      snapshot.holdReason === 'content_conflict' ||
       snapshot.outcome === 'delivered' ||
       snapshot.observed === 'present'
     ) {

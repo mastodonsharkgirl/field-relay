@@ -35,6 +35,10 @@ export type VendorListReadback = {
   verification: 'verified' | 'unavailable' | 'invalid';
 };
 export type ScenarioResult = {
+  jobId?: string;
+  checks?: Measurement[];
+  eventSequences?: number[];
+  finalState?: string;
   name: string;
   status: 'passed' | 'failed' | 'skipped';
   reason: string;
@@ -48,7 +52,24 @@ export type ScenarioResult = {
   wireGetCount: number | null;
   replayAcknowledgments: number | null;
 };
+export type Measurement = {
+  name: string;
+  expected: string | number | boolean | null;
+  observed: string | number | boolean | null;
+  mode: 'equal' | 'at-most' | 'at-least';
+};
+export const measurementPassed = (check: Measurement) =>
+  check.mode === 'equal'
+    ? check.observed === check.expected
+    : typeof check.expected === 'number' &&
+      typeof check.observed === 'number' &&
+      Number.isFinite(check.expected) &&
+      Number.isFinite(check.observed) &&
+      (check.mode === 'at-most'
+        ? check.observed <= check.expected
+        : check.observed >= check.expected);
 export type RunEvidence = {
+  status: 'passed' | 'failed';
   schemaVersion: 1;
   metadata: RunMetadata;
   jobs: JobSnapshot[];
@@ -156,114 +177,176 @@ const safeReceipt = (receipt: VendorReceipt | null) =>
         ...(receipt.replayed === undefined ? {} : { replayed: receipt.replayed }),
       };
 
-export const buildEvidence = (input: Omit<RunEvidence, 'schemaVersion'>): RunEvidence => ({
-  schemaVersion: 1,
-  metadata: {
-    ...pick(input.metadata, [
-      'runId',
-      'mode',
-      'scripted',
-      'sourceSha',
-      'dirty',
-      'nodeVersion',
-      'pythonVersion',
-      'sqliteVersion',
-      'os',
-      'startedAt',
-      'finishedAt',
-      'timezone',
-      'elapsedMs',
-      'credentialScanPassed',
-      'cleanupVerified',
-    ]),
-    commands: [...input.metadata.commands],
-    fixtureHashes: pick(input.metadata.fixtureHashes, ['northstar', 'orbit']),
-  },
-  jobs: input.jobs.map((job) => ({
-    ...pick(job, [
-      'jobId',
-      'vendorStoreId',
-      'approvalRevision',
-      'approvalState',
-      'approvalExpiresAt',
-      'holdReason',
-      'postReservations',
-      'getReservations',
-      'firstAdmissionAt',
-      'deadlineAt',
-      'nextAttemptAt',
-      'leaseId',
-      'leaseExpiresAt',
-      'observed',
-      'outcome',
-    ]),
-    order: validateOrder(job.order),
-    identity: pick(job.identity, ['businessKey', 'canonical', 'payloadDigest', 'idempotencyKey']),
-    claimedReceipt: safeReceipt(job.claimedReceipt),
-    receipt: safeReceipt(job.receipt),
-  })),
-  events: input.events.map((event) =>
-    pick(event, [
-      'sequence',
-      'jobId',
-      'kind',
-      'at',
-      'approvalRevision',
-      'attempt',
-      'outcome',
-      'httpStatus',
-      'nextAttemptAt',
-      'reason',
-      'observed',
-      'vendorOrderId',
-      'requestId',
-    ]),
-  ),
-  vendorReadback: {
-    ...pick(input.vendorReadback, [
-      'readAt',
-      'httpStatus',
-      'storeId',
-      'count',
-      'inspectionRequests',
-      'verification',
-    ]),
-    orders: input.vendorReadback.orders.map((receipt) => safeReceipt(receipt)!),
-  },
-  scenarioResults: input.scenarioResults.map((result) =>
-    pick(result, [
-      'name',
-      'status',
-      'reason',
-      'expectedCount',
-      'observedCount',
-      'exactPayload',
-      'postCount',
-      'automaticGetCount',
-      'elapsedMs',
-      'wirePostCount',
-      'wireGetCount',
-      'replayAcknowledgments',
-    ]),
-  ),
-});
+export const runPassed = (evidence: RunEvidence): boolean => {
+  const read = evidence.vendorReadback;
+  return (
+    evidence.metadata.cleanupVerified &&
+    evidence.metadata.credentialScanPassed &&
+    evidence.scenarioResults.length > 0 &&
+    evidence.scenarioResults.every(
+      (row) => row.status === 'passed' && row.checks?.length && row.checks.every(measurementPassed),
+    ) &&
+    read.verification === 'verified' &&
+    read.count === read.orders.length &&
+    read.storeId !== null &&
+    read.count === evidence.jobs.filter((job) => job.observed === 'present').length &&
+    evidence.jobs.every((job) => {
+      const receipt = read.orders.find(
+        (order) => order.idempotencyKey === job.identity.idempotencyKey,
+      );
+      if (job.observed === 'absent') return receipt === undefined;
+      if (job.observed !== 'present' || !job.receipt || !receipt) return false;
+      return (
+        receipt.vendorOrderId === job.receipt.vendorOrderId &&
+        receipt.committedAt === job.receipt.committedAt &&
+        receipt.storeId === job.vendorStoreId &&
+        receipt.payloadDigest === job.identity.payloadDigest &&
+        JSON.stringify(validateOrder(receipt.order)) === JSON.stringify(validateOrder(job.order))
+      );
+    })
+  );
+};
+
+export const buildEvidence = (
+  input: Omit<RunEvidence, 'schemaVersion' | 'status'>,
+): RunEvidence => {
+  const evidence: RunEvidence = {
+    status: 'failed',
+    schemaVersion: 1,
+    metadata: {
+      ...pick(input.metadata, [
+        'runId',
+        'mode',
+        'scripted',
+        'sourceSha',
+        'dirty',
+        'nodeVersion',
+        'pythonVersion',
+        'sqliteVersion',
+        'os',
+        'startedAt',
+        'finishedAt',
+        'timezone',
+        'elapsedMs',
+        'credentialScanPassed',
+        'cleanupVerified',
+      ]),
+      commands: [...input.metadata.commands],
+      fixtureHashes: pick(input.metadata.fixtureHashes, ['northstar', 'orbit']),
+    },
+    jobs: input.jobs.map((job) => ({
+      ...pick(job, [
+        'jobId',
+        'vendorStoreId',
+        'approvalRevision',
+        'approvalState',
+        'approvalExpiresAt',
+        'holdReason',
+        'postReservations',
+        'getReservations',
+        'firstAdmissionAt',
+        'deadlineAt',
+        'nextAttemptAt',
+        'leaseId',
+        'leaseExpiresAt',
+        'observed',
+        'outcome',
+      ]),
+      order: validateOrder(job.order),
+      identity: pick(job.identity, ['businessKey', 'canonical', 'payloadDigest', 'idempotencyKey']),
+      claimedReceipt: safeReceipt(job.claimedReceipt),
+      receipt: safeReceipt(job.receipt),
+    })),
+    events: input.events.map((event) =>
+      pick(event, [
+        'sequence',
+        'jobId',
+        'kind',
+        'at',
+        'approvalRevision',
+        'attempt',
+        'outcome',
+        'httpStatus',
+        'nextAttemptAt',
+        'reason',
+        'observed',
+        'vendorOrderId',
+        'requestId',
+      ]),
+    ),
+    vendorReadback: {
+      ...pick(input.vendorReadback, [
+        'readAt',
+        'httpStatus',
+        'storeId',
+        'count',
+        'inspectionRequests',
+        'verification',
+      ]),
+      orders: input.vendorReadback.orders.map((receipt) => safeReceipt(receipt)!),
+    },
+    scenarioResults: input.scenarioResults.map((result) => ({
+      ...pick(result, [
+        'jobId',
+        'eventSequences',
+        'finalState',
+        'name',
+        'status',
+        'reason',
+        'expectedCount',
+        'observedCount',
+        'exactPayload',
+        'postCount',
+        'automaticGetCount',
+        'elapsedMs',
+        'wirePostCount',
+        'wireGetCount',
+        'replayAcknowledgments',
+      ]),
+      checks: (result.checks ?? []).map((check) =>
+        pick(check, ['name', 'expected', 'observed', 'mode']),
+      ),
+      status:
+        result.status === 'passed' &&
+        (!result.checks?.length || !result.checks.every(measurementPassed))
+          ? 'failed'
+          : result.status,
+    })),
+  };
+  evidence.status = runPassed(evidence) ? 'passed' : 'failed';
+  return evidence;
+};
+
+export const renderEvidence = (evidence: RunEvidence) => {
+  const rows = evidence.scenarioResults
+    .map(
+      (result) =>
+        `| ${result.name} | ${result.status} | ${result.expectedCount} | ${result.observedCount ?? 'unverified'} | ${result.exactPayload ?? 'not applicable / unverified'} | ${result.postCount} | ${result.automaticGetCount} | ${result.elapsedMs} |`,
+    )
+    .join('\n');
+  const details = evidence.scenarioResults
+    .map(
+      (row) =>
+        `\n## ${row.name}\n\nJob: ${row.jobId ?? 'unavailable'}. Final relay state: ${row.finalState ?? 'unavailable'}. Relevant audit sequences: ${(row.eventSequences ?? []).join(', ')}.\n\nWire totals for this key: POST ${row.wirePostCount ?? 'unknown'}, GET ${row.wireGetCount ?? 'unknown'}, replay acknowledgments ${row.replayAcknowledgments ?? 'unknown'}. GET totals include evidence inspections; deltas and their components are checked below.\n\n| Measurement | Comparison | Expected | Observed | Result |\n| --- | --- | --- | --- | --- |\n${(row.checks ?? []).map((check) => `| ${check.name} | ${check.mode} | ${String(check.expected)} | ${String(check.observed)} | ${measurementPassed(check) ? 'passed' : 'failed'} |`).join('\n')}\n`,
+    )
+    .join('\n');
+  const totals = ['passed', 'failed', 'skipped']
+    .map(
+      (status) =>
+        `${status}: ${evidence.scenarioResults.filter((row) => row.status === status).length}`,
+    )
+    .join(', ');
+  return {
+    json: JSON.stringify(evidence, null, 2) + '\n',
+    markdown: `# Synthetic local run ${evidence.metadata.runId}\n\nOverall result: ${evidence.status}. Scenarios ${totals}. Final supplier verification: ${evidence.vendorReadback.verification}; count: ${evidence.vendorReadback.count ?? 'unknown'}.\n\nSource: ${evidence.metadata.sourceSha}; dirty: ${evidence.metadata.dirty}.\n\nApproval source: ${evidence.metadata.scripted ? 'scripted harness' : 'local operator'}. No real vendor or model called.\n\n| Scenario | Result | Expected orders | Verified orders | Exact payload | Reserved POSTs | Automatic GETs | Scenario ms |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |\n${rows}\n\nVendor inspection requests: ${evidence.vendorReadback.inspectionRequests}. Total local workflow: ${evidence.metadata.elapsedMs} ms, including injected delays. Not a production performance benchmark.\n${details}`,
+  };
+};
 
 export const writeEvidence = (evidence: RunEvidence, directory: string): void => {
   if (!evidence.metadata.credentialScanPassed) throw Error('Evidence credential scan failed.');
   mkdirSync(directory, { recursive: true });
   const id = new Date().toISOString().replaceAll(/[:.]/g, '-') + '-' + randomUUID().slice(0, 8);
-  writeFileSync(join(directory, id + '.json'), JSON.stringify(evidence, null, 2) + '\n', {
-    flag: 'wx',
-  });
-  const rows = evidence.scenarioResults
-    .map(
-      (result) =>
-        `| ${result.name} | ${result.status} | ${result.expectedCount} | ${result.observedCount ?? 'unverified'} | ${result.postCount} | ${result.automaticGetCount} | ${result.reason} |`,
-    )
-    .join('\n');
-  writeFileSync(
-    join(directory, id + '.md'),
-    `# Synthetic local run ${evidence.metadata.runId}\n\nSource: ${evidence.metadata.sourceSha}; dirty: ${evidence.metadata.dirty}.\n\nApproval source: ${evidence.metadata.scripted ? 'scripted harness' : 'local operator'}. No real vendor or model called.\n\n| Scenario | Result | Expected orders | Verified orders | Reserved POSTs | Automatic GETs | Explanation |\n| --- | --- | ---: | ---: | ---: | ---: | --- |\n${rows}\n\nVendor inspection requests: ${evidence.vendorReadback.inspectionRequests}. Total local workflow: ${evidence.metadata.elapsedMs} ms, including injected delays. Not a production performance benchmark.\n`,
-    { flag: 'wx' },
-  );
+  const rendered = renderEvidence(evidence);
+  writeFileSync(join(directory, id + '.json'), rendered.json, { flag: 'wx' });
+  writeFileSync(join(directory, id + '.md'), rendered.markdown, { flag: 'wx' });
 };

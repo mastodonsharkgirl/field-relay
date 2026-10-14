@@ -19,7 +19,7 @@ export const startLab = async (options: { mode: 'new' | 'resume'; runId?: string
     startRelay: (options: {
       fixture: 'northstar' | 'orbit';
       scripted: boolean;
-      stopAt?: 'admission' | 'commit';
+      stopAt?: 'before-admission' | 'admission' | 'commit';
     }) => {
       if (!options.scripted) throw Error('Test harness approvals must be labelled scripted.');
       const connection = runtime.connection;
