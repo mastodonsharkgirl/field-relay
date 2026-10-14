@@ -15,3 +15,9 @@ A reviewer may record a hold, a proposal to treat Candidate as current, or an ex
 ## Separate delivery lab
 
 The original delivery simulation remains available as a separate fictional lab. It demonstrates parser validation, conflict quarantine, local approval, outage retry, and replay-safe event history. It does not read reconciliation output and does not send anything.
+
+## Local integration experiment
+
+A separate Node/Python HTTP lab explores what happens when a supplier saves an order but the reply is lost. It keeps the approved fields and order identity fixed, records attempts on disk, and checks the mock supplier's actual saved result. Focused local tests cover response loss, process crashes, competing workers, changed payloads and revocation timing. Whole-system acceptance is still pending; see the dated [release checkpoint](integration/RELEASE.md).
+
+This is an AI-assisted learning prototype using fictional fixtures. The friend-at-a-supply-chain-company scenario in the [interview guide](integration/INTERVIEW_GUIDE.md) is hypothetical. No customer discovery, adoption, commercial result, Claude integration or enterprise deployment is claimed.

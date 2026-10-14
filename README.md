@@ -1,13 +1,38 @@
 # Field Relay
 
-A static, local-only demonstration of partner-order CSV intake and safe simulated delivery. It is served below `/labs/field-relay/` by default and contains no API, storage, account, vendor or real order connection.
+Field Relay helps someone answer: **what changed between these two CSV exports?** Its main product is a browser-local reconciliation desk, served below `/labs/field-relay/`. It shows original rows behind changed, missing, duplicate and blank-ID findings, with explicit local review decisions and downloadable reports.
+
+The repository also contains two separate fictional learning exercises: the existing browser delivery simulator and an opt-in local HTTP lab. Browser files and approvals never enter the HTTP lab. No real supplier, customer account or model is connected.
 
 ## Run
 
 `npm ci`, then `npm run dev`. Use `npm test` for deterministic fixture tests and `npm run qa` for type checks, linting, formatting, unit tests, build and Playwright checks. Install the browser once with `npx playwright install chromium` before running browser checks.
 
-## Boundaries and limits
+## Local HTTP exercise
+
+Development checkpoint, 15 October 2026: the launcher and focused failure checks work locally. Full integration aggregation, full application QA and final branch review are still pending. See the [release checkpoint](docs/integration/RELEASE.md) before describing this as a completed release.
+
+Prerequisites: installed repository dependencies, Node 24.11 or compatible Node 25, and Python 3.14 available through the Windows `py` launcher. The tested Node 24.11 SQLite API emits an experimental warning. The lab starts a hidden Python mock supplier on an OS-assigned `127.0.0.1` port and separate Node relay processes.
+
+```powershell
+# Show each exact synthetic order and ask for local approval
+npm run integration:demo
+
+# Repeat the fixed exercise with explicitly labelled harness approvals
+npm run integration:demo -- --scripted
+
+# Reopen the printed run ID with fresh session credentials
+npm run integration:demo -- --scripted --resume RUN_ID
+
+# Acceptance commands; final aggregate results are pending
+npm run integration:check
+npm run integration:test
+```
+
+Every run keeps its SQLite files and reports in `.local/integration/<run-id>/`. Normal exit and the interruption handler stop owned children while preserving evidence. New runs never overwrite old ones. Use the [walkthrough](docs/integration/WALKTHROUGH.md), [contract](docs/integration/CONTRACT.md) and [interview guide](docs/integration/INTERVIEW_GUIDE.md) to inspect the behavior. The [executive brief](docs/integration/EXECUTIVE_BRIEF.md) explains the business risk.
+
+## Browser simulator boundaries and limits
 
 CSV input is limited to 500 KB and 5,000 rows. Supported valid regions are North, South, East, West and Central. Quantity is digits-only 1–10,000. Amounts must be positive decimal values up to 999,999,999.99 and are converted to integer minor units. The visible ledger keeps its newest 500 events; the local-only session registry retains idempotency bindings until reset. Northstar has 9 data rows: 2 standard ready records, 1 exact duplicate, 2 conflicting rows, 1 invalid quantity, 1 unknown region, and 2 manual-review records (Central and 500.00). Orbit has two standard ready records.
 
-See [architecture](docs/ARCHITECTURE.md) and the [case study](docs/CASE_STUDY.md).
+The limits and fixture counts above belong to the existing browser simulator. The HTTP lab has its own small synthetic fixtures, durable databases and bounded transport contract. See [architecture](docs/ARCHITECTURE.md) and the [case study](docs/CASE_STUDY.md).

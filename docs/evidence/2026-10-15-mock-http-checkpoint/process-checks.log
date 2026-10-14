@@ -1,0 +1,14 @@
+(node:55732) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real relay crash at admission retains budgets and recovers through readback (7241.0078ms)
+✔ real relay crash at commit retains budgets and recovers through readback (6511.3341ms)
+✔ two real relay workers cannot create a second vendor order (1517.901ms)
+✔ late commit after a client timeout shares the same stored order as its retry (1893.7812ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17755.7722

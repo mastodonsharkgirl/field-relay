@@ -71,3 +71,15 @@ No existing release counts or custom-domain states should be rewritten based on 
 ## Required next handoff evidence
 
 Before promoting the proposed exercise to “built,” retain approved design and plan, implementation source SHA, exact local launch instructions, integration test results with failures/skips visible, sanitized vendor readback, measured retry/admission timelines, independent review findings and their disposition, and updated local boundary documentation. Preserve explicit differences between local verification, committed code, pushed code, CI, preview deployment and a real customer rollout.
+
+## Later checkpoint — 15 October 2026
+
+This section supersedes the design-only state above while preserving that dated record. The cross-language contract, persistent mock supplier, relay state and recovery transport are implemented; their scoped reviews are clear through `2d19281`. Launcher, lifecycle evidence and interview documentation are now present. Focused checks have passed, including response loss, crash recovery, late commit, revocation, safe resume, credential rotation and owned-process cleanup. The aggregate suite, full application QA and final whole-branch review remain pending. See [RELEASE.md](integration/RELEASE.md) for exact overlapping focused counts and limitations.
+
+The user explicitly asked this chat to check Compass before deciding about heavy checks. Compass is now complete and its release receipt confirms its task model was unloaded. The shared queue assigns another already-authorized inference task next, so this work remains at a lightweight checkpoint until its slot is available.
+
+Suggested current wording: “Field Relay compares two CSV exports with row evidence. A separate synthetic local HTTP lab explores approved order delivery, response loss and recovery. Its core has passed scoped review and focused process tests; final whole-system acceptance is pending.” No live customer, Claude integration, cloud architecture, adoption or impact claim follows from this.
+
+The previous numerical total-tenure wording is not a current verified claim and must not be copied forward. Acting and filmmaking count as professional experience overall. Any overall, technical customer-facing, PM or domain tenure needs its own verified nonoverlapping timeline.
+
+Proposed shared-registry note, **not applied**: Field Relay local HTTP implementation checkpoint; core reviewed; launcher/lifecycle checks and interview guide available; final acceptance queued; no publication or custom-domain state change. This chat continues to own only Field Relay, not the shared registry or portfolio sites.

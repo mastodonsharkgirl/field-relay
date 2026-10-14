@@ -23,6 +23,7 @@ SCENARIOS.update({'malformed_success_absent', 'wrong_content_type_success', 'mal
                   'claimed_receipt_mismatch'})
 READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'claimed_receipt_mismatch', 'malformed_404', 'slow_404', 'invalid_404', 'mismatched_404'}
 SCENARIOS.update(READBACK_ACTIONS)
+SCENARIOS.add('hold_before_commit')
 
 
 class DeadlineReader:
@@ -275,6 +276,9 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             if action == 'redirect':
                 self._redirect(key); return
             if action == 'timeout_before_commit': time.sleep(5); return
+            if action == 'hold_before_commit':
+                with barrier_lock: barrier = barriers.setdefault(key, threading.Event())
+                barrier.wait(5)
             try:
                 status, receipt = store.create_or_replay(order, key, request_id, _rollback_for_test=action == 'rollback_transaction')
             except RuntimeError:

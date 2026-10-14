@@ -2,7 +2,7 @@
 
 Date: 13 October 2026 (Asia/Calcutta)
 
-Status: owner approved the written design on 13 October 2026 with “go ahead, use @Superpowers.” The [implementation plan](../plans/2026-10-13-mock-http-integration.md) is prepared for review; implementation has not started.
+Status updated 15 October 2026: owner approved the written design and subsequently the [implementation plan](../plans/2026-10-13-mock-http-integration.md). Tasks 1–4 are implemented and reviewed. Launcher and documentation source is in progress; final acceptance is pending. The design below preserves the original requirements; [release checkpoint](../../integration/RELEASE.md) records current evidence.
 
 Source baseline: `a55564c6f4b0872c8c78c211c8b84fafccf73d64`.
 

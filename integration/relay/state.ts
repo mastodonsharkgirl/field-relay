@@ -276,7 +276,13 @@ class SqliteRelayStore implements RelayStore {
     });
   }
 
-  approve(jobId: string, expectedRevision: number, now: number): JobSnapshot {
+  approve(
+    jobId: string,
+    expectedRevision: number,
+    now: number,
+    source: 'operator' | 'harness' = 'operator',
+  ): JobSnapshot {
+    if (source !== 'operator' && source !== 'harness') throw Error('Invalid approval source.');
     return this.#transaction(() => {
       const row = this.#row(jobId);
       if (asNumber(row.approval_revision) !== expectedRevision)
@@ -287,7 +293,7 @@ class SqliteRelayStore implements RelayStore {
           `UPDATE jobs SET approval_revision = approval_revision + 1, approval_state = 'approved', approval_expires_at = ?, last_observed_at = ? WHERE job_id = ?`,
         )
         .run(now + APPROVAL_MS, now, jobId);
-      this.#event(jobId, 'approved', now);
+      this.#event(jobId, 'approved', now, { reason: source });
       return this.#snapshot(this.#row(jobId));
     });
   }
@@ -309,6 +315,12 @@ class SqliteRelayStore implements RelayStore {
 
   snapshot(jobId: string) {
     return this.#snapshot(this.#row(jobId));
+  }
+
+  list(): JobSnapshot[] {
+    return (this.#db.prepare('SELECT job_id FROM jobs ORDER BY rowid').all() as Row[]).map((row) =>
+      this.snapshot(String(row.job_id)),
+    );
   }
 
   events(jobId: string): AuditEvent[] {

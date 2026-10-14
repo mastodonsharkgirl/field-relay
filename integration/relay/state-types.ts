@@ -119,9 +119,15 @@ export type AuditEvent = {
 /* eslint-disable no-unused-vars -- Interface names are API documentation. */
 export interface RelayStore {
   enqueue(order: Order, vendorStoreId: string, now: number): JobSnapshot;
-  approve(jobId: string, expectedRevision: number, now: number): JobSnapshot;
+  approve(
+    jobId: string,
+    expectedRevision: number,
+    now: number,
+    source?: 'operator' | 'harness',
+  ): JobSnapshot;
   revoke(jobId: string, expectedRevision: number, reason: string, now: number): JobSnapshot;
   snapshot(jobId: string): JobSnapshot;
+  list(): JobSnapshot[];
   events(jobId: string): AuditEvent[];
   reservePost(jobId: string, workerId: string, now: number): Admission | Blocked;
   reserveRead(jobId: string, now: number): ReadReservation | Blocked;

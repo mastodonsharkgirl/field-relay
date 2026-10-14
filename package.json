@@ -7,6 +7,10 @@
     "node": ">=24.11.0 <26"
   },
   "scripts": {
+    "integration:check": "node integration/check.ts",
+    "integration:test": "node integration/tests/run-all.ts",
+    "integration:demo": "node integration/launch.ts",
+    "integration:cli": "node integration/relay/cli.ts",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",

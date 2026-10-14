@@ -207,8 +207,9 @@ class VendorStore:
         try:
             row = connection.execute('SELECT post_index,get_index,post_request_count,get_request_count FROM scenarios WHERE idempotency_key=?', (key,)).fetchone()
             requests = connection.execute("SELECT request_id,event FROM request_audit WHERE idempotency_key=? AND event IN ('post_received','get_received') ORDER BY id DESC LIMIT 200", (key,)).fetchall()
+            effects = {event: connection.execute('SELECT COUNT(*) n FROM request_audit WHERE idempotency_key=? AND event=?', (key, event)).fetchone()['n'] for event in ('committed', 'replay', 'conflict')}
             return {'phase': 'configured' if row else 'healthy', 'sequence': {'post': row['post_index'], 'get': row['get_index']} if row else {'post': 0, 'get': 0}, 'requestCount': {'post': row['post_request_count'], 'get': row['get_request_count']} if row else {'post': 0, 'get': 0},
-                    'requestIds': {route: [item['request_id'] for item in reversed(requests) if item['event'] == route + '_received'] for route in ('post', 'get')}}
+                    'requestIds': {route: [item['request_id'] for item in reversed(requests) if item['event'] == route + '_received'] for route in ('post', 'get')}, 'effects': effects}
         finally:
             connection.close()
 

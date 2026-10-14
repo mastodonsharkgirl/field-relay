@@ -9,5 +9,5 @@
     "erasableSyntaxOnly": true,
     "types": ["node"]
   },
-  "include": ["relay/**/*.ts", "tests/**/*.ts", "../src/lib/core.ts"]
+  "include": ["*.ts", "relay/**/*.ts", "tests/**/*.ts", "../src/lib/core.ts"]
 }

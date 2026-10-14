@@ -8,7 +8,9 @@
 
 **Tech Stack:** Node 24.11.0, native TypeScript stripping, experimental `node:sqlite`, Python 3.14 standard library, SQLite, Node test runner, Python unittest, existing npm/Astro QA.
 
-**Spec:** [Approved integration design](../specs/2026-10-13-mock-http-integration-design.md). Owner approved the written spec with “go ahead, use @Superpowers” on 13 October 2026. This implementation plan remains pending owner review and execution-method selection.
+**Spec:** [Approved integration design](../specs/2026-10-13-mock-http-integration-design.md). Owner approved the written spec with “go ahead, use @Superpowers” and subsequently explicitly approved the Field Relay plan. Execution began with sequential subagents and scoped reviews, then continued inline after an unavailable implementer, preserving the review gates.
+
+**Current checkpoint, 15 October 2026:** Tasks 1–4 are implemented and reviewed. Task 5 launcher/lifecycle source and Task 6 interview/documentation drafts are present. Aggregate integration, full application QA and final whole-branch review remain pending; see [release checkpoint](../../integration/RELEASE.md). The original task checklist below is retained as the acceptance contract, not a claim that every item is complete.
 
 ## Global Constraints
 
