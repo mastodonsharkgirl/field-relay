@@ -231,7 +231,11 @@ export const launchExercise = async (options: {
           reconciled.observed === 'present' ? 1 : 0,
           (current) =>
             current.observed !== 'unknown' &&
-            current.deadlineAt === job.deadlineAt &&
+            (job.deadlineAt === null
+              ? current.deadlineAt === null ||
+                (current.firstAdmissionAt !== null &&
+                  current.deadlineAt === current.firstAdmissionAt + 30_000)
+              : current.deadlineAt === job.deadlineAt) &&
             current.postReservations >= job.postReservations &&
             current.postReservations <= 3,
           baseline,

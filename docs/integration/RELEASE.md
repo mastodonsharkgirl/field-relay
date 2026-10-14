@@ -22,6 +22,8 @@ The [saved evidence](../evidence/2026-10-15-mock-http/README.md) contains the ac
 
 After the aggregate, scoped review found bounded reporting gaps: enforce the timeout upper bound; record actual invocation arguments; and render saved per-event approval sources instead of inferring them from the latest launcher mode. These fixes passed focused three-test and two-test runs plus renewed type/Python checks and lint. The aggregate/build/browser results above remain associated with `478a207`; no second full run is claimed. The compute slot has been released, with [an explicit receipt](../evidence/2026-10-15-mock-http/COMPUTE_RELEASE.json), while read-only review and documentation continue.
 
+The subsequent clean implementation commit `4e52364c7ce2e9bb139d141912630ebdceb3f046` passed a new [five-scenario walkthrough](../evidence/2026-10-15-mock-http/final/walkthrough.md) and [three-job resume](../evidence/2026-10-15-mock-http/final/resume.md). Both verified the same two supplier orders, with elapsed local workflows of 5,248 ms and 1,734 ms. These short single-process exercises did not restart a full build/browser run after compute release.
+
 ## Source and execution state
 
 - Browser product baseline: `a55564c6f4b0872c8c78c211c8b84fafccf73d64`.

@@ -1,6 +1,6 @@
 # Explain Field Relay in an interview
 
-This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. Local integration, build and browser checks have passed; use the [release record](RELEASE.md) for current review status and the [saved walkthrough](../evidence/2026-10-15-mock-http/walkthrough.md) for measured outcomes.
+This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. Local integration, build and browser checks have passed; use the [release record](RELEASE.md) for current review status and the [saved walkthrough](../evidence/2026-10-15-mock-http/final/walkthrough.md) for measured outcomes.
 
 ## Start with the problem
 

@@ -7,6 +7,29 @@ import { identify } from '../relay/contract.ts';
 import { waitUntil, controlRequest } from '../runtime.ts';
 import { readVendorList } from '../relay/evidence.ts';
 
+test('resume can make the first admission of an already approved unsent order', async () => {
+  const lab = await startLab({ mode: 'new' });
+  try {
+    const fixture = await lab.command(['fixture', 'northstar']);
+    assert.equal(fixture.code, 0);
+    const [job] = JSON.parse(fixture.stdout);
+    assert.equal((await lab.command(['approve', job.jobId, '0', 'operator'])).code, 0);
+  } finally {
+    await lab.stop();
+  }
+  const { launchExercise } = await import('../launch.ts');
+  const evidence = await launchExercise({
+    mode: 'resume',
+    runId: lab.runId,
+    scenario: 'response-loss',
+    scripted: true,
+  });
+  assert.equal(evidence.status, 'passed');
+  assert.equal(evidence.jobs[0].postReservations, 1);
+  assert.equal(evidence.jobs[0].observed, 'present');
+  assert.equal(evidence.jobs[0].deadlineAt, evidence.jobs[0].firstAdmissionAt! + 30_000);
+});
+
 test('scripted resume retains mixed operator and harness approval history', async () => {
   const lab = await startLab({ mode: 'new' });
   try {
