@@ -811,6 +811,99 @@ test('audit insertion failure rolls back the enclosing state mutation', () => {
   });
 });
 
+test('retry schedule audit and POST settlement roll back together and survive reopen', () => {
+  withStore((path) => {
+    let store = openRelayStore(path, 'new');
+    const db = new DatabaseSync(path);
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      store.approve(pending.jobId, 0, 1_001);
+      const admission = store.reservePost(pending.jobId, 'worker', 1_002);
+      assert.equal(admission.kind, 'admitted');
+      if (admission.kind !== 'admitted') throw Error('admission missing');
+      const before = store.snapshot(pending.jobId);
+      const eventsBefore = store.events(pending.jobId);
+      const result = {
+        classification: 'retryable' as const,
+        httpStatus: 429,
+        nextAttemptAt: 1_200,
+        claimedReceipt: null,
+        retryReason: 'malformed_retry_after_fallback' as const,
+      };
+      db.exec(
+        "CREATE TRIGGER fail_retry_audit BEFORE INSERT ON audit_events WHEN NEW.kind = 'retry_scheduled' BEGIN SELECT RAISE(ABORT, 'retry audit failure'); END;",
+      );
+      assert.throws(() => store.settle(admission, result, 1_100), /retry audit failure/);
+      assert.deepEqual(store.snapshot(pending.jobId), before);
+      assert.deepEqual(store.events(pending.jobId), eventsBefore);
+      db.exec('DROP TRIGGER fail_retry_audit');
+      store.settle(admission, result, 1_100);
+      store.close();
+      store = openRelayStore(path, 'resume');
+      const schedule = store
+        .events(pending.jobId)
+        .find((event) => event.kind === 'retry_scheduled');
+      assert.equal(schedule?.reason, 'malformed_retry_after_fallback');
+      assert.equal(schedule?.scheduledDelayMs, 100);
+      assert.equal(schedule?.requestId, admission.requestId);
+    } finally {
+      db.close();
+      store.close();
+    }
+  });
+});
+
+test('automatic read schedule audit and settlement roll back together', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    const db = new DatabaseSync(path);
+    try {
+      const job = store.enqueue(order, 'fixture-store', 1_000);
+      store.approve(job.jobId, 0, 1_001);
+      const post = store.reservePost(job.jobId, 'worker', 1_002);
+      if (post.kind !== 'admitted') throw Error('admission missing');
+      store.settle(
+        post,
+        {
+          classification: 'retryable',
+          httpStatus: 503,
+          nextAttemptAt: 1_100,
+          claimedReceipt: null,
+          retryReason: 'full_jitter',
+        },
+        1_003,
+      );
+      const read = store.reserveRead(job.jobId, 1_100);
+      if (read.kind !== 'read_reserved') throw Error('read missing');
+      const before = store.snapshot(job.jobId);
+      const eventsBefore = store.events(job.jobId);
+      const result = {
+        kind: 'unknown' as const,
+        reason: 'vendor_unavailable' as const,
+        httpStatus: 503,
+        nextAttemptAt: 1_300,
+        retryReason: 'full_jitter' as const,
+      };
+      db.exec(
+        "CREATE TRIGGER fail_retry_audit BEFORE INSERT ON audit_events WHEN NEW.kind = 'retry_scheduled' BEGIN SELECT RAISE(ABORT, 'retry audit failure'); END;",
+      );
+      assert.throws(() => store.settleRead(read, result, 1_101), /retry audit failure/);
+      assert.deepEqual(store.snapshot(job.jobId), before);
+      assert.deepEqual(store.events(job.jobId), eventsBefore);
+      db.exec('DROP TRIGGER fail_retry_audit');
+      store.settleRead(read, result, 1_101);
+      const schedule = store
+        .events(job.jobId)
+        .findLast((event) => event.kind === 'retry_scheduled');
+      assert.equal(schedule?.scheduledDelayMs, 199);
+      assert.equal(schedule?.requestId, read.requestId);
+    } finally {
+      db.close();
+      store.close();
+    }
+  });
+});
+
 test('actual corrupt database bytes and unknown schema fail closed without overwriting relay state', () => {
   const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
   const corrupt = join(directory, 'corrupt.sqlite');

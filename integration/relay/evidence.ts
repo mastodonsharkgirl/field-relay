@@ -269,6 +269,7 @@ export const buildEvidence = (
         'httpStatus',
         'nextAttemptAt',
         'reason',
+        'scheduledDelayMs',
         'observed',
         'vendorOrderId',
         'requestId',
@@ -318,6 +319,14 @@ export const buildEvidence = (
 };
 
 export const renderEvidence = (evidence: RunEvidence) => {
+  const retryRows = evidence.events
+    .filter((event) => event.kind === 'retry_scheduled' || event.kind === 'retry_schedule_ignored')
+    .map(
+      (event) =>
+        `| ${event.sequence} | ${event.jobId} | ${event.kind} | ${event.reason} | ${event.scheduledDelayMs ?? 'unrepresentable'} | ${event.nextAttemptAt ?? 'unrepresentable'} |`,
+    )
+    .join('\n');
+  const retryTimeline = `\n## Persisted retry timeline\n\nDelay is derived from the saved decision time and due time. An ignored schedule is evidence of a proposal, not permission to retry.\n\n| Event | Job | Disposition | Reason | Delay ms | Due epoch ms |\n| --- | --- | --- | --- | ---: | ---: |\n${retryRows || '| — | — | No retry schedule recorded | — | — | — |'}\n`;
   const approvals = evidence.jobs
     .map((job) => {
       const history = evidence.events
@@ -349,7 +358,7 @@ export const renderEvidence = (evidence: RunEvidence) => {
     .join(', ');
   return {
     json: JSON.stringify(evidence, null, 2) + '\n',
-    markdown: `# Synthetic local run ${evidence.metadata.runId}\n\nOverall result: ${evidence.status}. Scenarios ${totals}. Final supplier verification: ${evidence.vendorReadback.verification}; count: ${evidence.vendorReadback.count ?? 'unknown'}.\n\nSource: ${evidence.metadata.sourceSha}; dirty: ${evidence.metadata.dirty}.\n\nLauncher mode: ${evidence.metadata.scripted ? 'scripted' : 'interactive'}. No real vendor or model called.\n\nPersisted approvals: each source below comes from its saved approval event, independent of the current launcher mode.\n\n${approvals}\n\n| Scenario | Result | Expected orders | Verified orders | Exact payload | Reserved POSTs | Automatic GETs | Scenario ms |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |\n${rows}\n\nVendor inspection requests: ${evidence.vendorReadback.inspectionRequests}. Total local workflow: ${evidence.metadata.elapsedMs} ms, including injected delays. Not a production performance benchmark.\n${details}`,
+    markdown: `# Synthetic local run ${evidence.metadata.runId}\n\nOverall result: ${evidence.status}. Scenarios ${totals}. Final supplier verification: ${evidence.vendorReadback.verification}; count: ${evidence.vendorReadback.count ?? 'unknown'}.\n\nSource: ${evidence.metadata.sourceSha}; dirty: ${evidence.metadata.dirty}.\n\nLauncher mode: ${evidence.metadata.scripted ? 'scripted' : 'interactive'}. No real vendor or model called.\n\nPersisted approvals: each source below comes from its saved approval event, independent of the current launcher mode.\n\n${approvals}\n\n| Scenario | Result | Expected orders | Verified orders | Exact payload | Reserved POSTs | Automatic GETs | Scenario ms |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |\n${rows}\n\nVendor inspection requests: ${evidence.vendorReadback.inspectionRequests}. Total local workflow: ${evidence.metadata.elapsedMs} ms, including injected delays. Not a production performance benchmark.\n${details}${retryTimeline}`,
   };
 };
 

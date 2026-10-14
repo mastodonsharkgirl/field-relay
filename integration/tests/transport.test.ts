@@ -137,6 +137,9 @@ test('a real 429 waits for Retry-After before reconciliation and then sends the 
       await assertScenarioCounts(vendor, identity.idempotencyKey, 2, 2);
 
       const events = store.events(jobId);
+      const schedule = events.find((event) => event.kind === 'retry_scheduled');
+      assert.equal(schedule?.reason, 'retry_after');
+      assert.equal(schedule?.scheduledDelayMs, 1_000);
       const limited = events.find(
         (event) => event.kind === 'post_settled' && event.httpStatus === 429,
       );
@@ -165,6 +168,27 @@ test('a real 429 waits for Retry-After before reconciliation and then sends the 
   });
 });
 
+test('a malformed Retry-After header records its fallback through real HTTP', async () => {
+  await withVendor(async (vendor) => {
+    const order = orderFor('HTTP-BAD-RETRY-HEADER');
+    const identity = identify(order);
+    await vendor.configure(identity.idempotencyKey, ['429_invalid_retry_after']);
+    await withApprovedJob(vendor, order, async (store, jobId) => {
+      const result = await dispatch(store, jobId, vendor.connection, 'worker-bad-retry-header');
+      assert.equal(result.outcome, 'delivered');
+      const schedule = store.events(jobId).find((event) => event.kind === 'retry_scheduled');
+      assert.equal(schedule?.reason, 'malformed_retry_after_fallback');
+      assert.ok(
+        schedule &&
+          schedule.scheduledDelayMs !== null &&
+          schedule.scheduledDelayMs >= 0 &&
+          schedule.scheduledDelayMs <= 250,
+      );
+      await assertScenarioCounts(vendor, identity.idempotencyKey, 2, 2);
+    });
+  });
+});
+
 test('a huge real Retry-After persists a null-due deferral and blocks later automatic requests', async () => {
   await withVendor(async (vendor) => {
     const order = orderFor('HTTP-HUGE-RETRY-AFTER');
@@ -175,6 +199,10 @@ test('a huge real Retry-After persists a null-due deferral and blocks later auto
       assert.equal(deferred.outcome, 'retryable');
       assert.equal(deferred.holdReason, 'deferred_outside_deadline');
       assert.equal(deferred.nextAttemptAt, null);
+      const schedule = store.events(jobId).find((event) => event.kind === 'retry_scheduled');
+      assert.equal(schedule?.reason, 'retry_after_unrepresentable');
+      assert.equal(schedule?.nextAttemptAt, null);
+      assert.equal(schedule?.scheduledDelayMs, null);
       await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 0);
 
       const repeated = await dispatch(store, jobId, vendor.connection, 'worker-huge-retry-after');
@@ -388,6 +416,18 @@ test('a readback outage consumes a bounded GET and retries only the read', async
       assert.equal(result.outcome, 'delivered');
       assert.equal(result.postReservations, 1);
       assert.equal(result.getReservations, 2);
+      const schedule = store.events(jobId).find((event) => event.kind === 'retry_scheduled');
+      assert.equal(schedule?.reason, 'full_jitter');
+      assert.ok(
+        schedule &&
+          schedule.scheduledDelayMs !== null &&
+          schedule.scheduledDelayMs >= 0 &&
+          schedule.scheduledDelayMs <= 250,
+      );
+      assert.equal(
+        schedule?.requestId,
+        store.events(jobId).find((event) => event.kind === 'read_reserved')?.requestId,
+      );
       await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 2);
     });
   });

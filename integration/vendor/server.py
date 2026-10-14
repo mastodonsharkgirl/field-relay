@@ -24,6 +24,7 @@ SCENARIOS.update({'malformed_success_absent', 'wrong_content_type_success', 'mal
 READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'claimed_receipt_mismatch', 'malformed_404', 'slow_404', 'invalid_404', 'mismatched_404'}
 SCENARIOS.update(READBACK_ACTIONS)
 SCENARIOS.add('hold_before_commit')
+SCENARIOS.add('429_invalid_retry_after')
 
 
 class DeadlineReader:
@@ -271,6 +272,8 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             faults = {'429': 429, '503': 503, '401': 401, '403': 403, '422': 422}
             if action == '429_huge_retry_after':
                 self._error(429, 'synthetic_429_huge_retry_after', request_id, '9' * 256); return
+            if action == '429_invalid_retry_after':
+                self._error(429, 'synthetic_429_invalid_retry_after', request_id, 'invalid'); return
             if action in faults:
                 self._error(faults[action], 'synthetic_' + action, request_id, '1' if action == '429' else None); return
             if action == 'redirect':

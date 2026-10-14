@@ -83,3 +83,17 @@ Suggested current wording: “Field Relay compares two CSV exports with row evid
 The previous numerical total-tenure wording is not a current verified claim and must not be copied forward. Acting and filmmaking count as professional experience overall. Any overall, technical customer-facing, PM or domain tenure needs its own verified nonoverlapping timeline.
 
 Proposed shared-registry note, **not applied**: Field Relay local HTTP implementation checkpoint; core reviewed; launcher/lifecycle checks and interview guide available; final acceptance queued; no publication or custom-domain state change. This chat continues to own only Field Relay, not the shared registry or portfolio sites.
+
+## Verified implementation handoff — 15 October 2026
+
+This later entry supersedes the queued-compute checkpoint above. Compass completion and resource release were verified; the coordinator then admitted Field Relay after the next queued task stopped at its resource preflight. Field Relay completed serial local verification and released its slot. The release receipt is saved with the evidence.
+
+Implementation candidate: `3813cc06f9d0c728890f00fa4a32bb79c6d2901d` on `codex/field-relay-mock-http`. Scoped implementation review is approved with no remaining findings. Independent final whole-branch review is recorded in [RELEASE.md](integration/RELEASE.md); consult it before claiming final branch acceptance.
+
+At source immediately committed as `478a207`, the integration aggregate passed 90 Node and 27 Python tests; application QA passed type/lint/format, 15 unit tests, the static build and 20 browser tests. Later bounded report/resume fixes passed their focused tests and renewed type/Python/lint checks. Clean walkthrough and resume at `4e52364` verified the same two supplier orders. These are qualified observations at different commits, not a fabricated single final-run total. [Evidence and exact provenance](evidence/2026-10-15-mock-http/README.md).
+
+Suggested portfolio wording: “Field Relay compares two CSV exports and shows the source rows behind each difference. I extended it with a separate, AI-assisted local HTTP experiment using fictional orders to test exact approval, response loss, duplicate prevention and verified recovery after process restarts. The saved tests and walkthrough show the local behavior; this is not a customer deployment or a live Claude integration.”
+
+For interview explanation, use the [guide](integration/INTERVIEW_GUIDE.md): a hypothetical supply-chain coordinator encounters mismatched exports and an uncertain order submission. Keep the hypothetical label and AI assistance explicit. The project supports a discussion of business problem framing, typed integration contracts, evaluation criteria, human approval, failure handling and technical communication. It establishes no customer outcomes, production architecture experience or numerical tenure total.
+
+Proposed current `domains.yaml` note, **not applied**: separate synthetic HTTP lab locally implemented and verified; source and review disposition in this repository; browser reconciliation interface unchanged; interview guide and measured local reports available; branch not pushed or deployed by this work; no change to custom-domain-live counts. A future authorized maintainer can apply that note without changing the existing site identity or launch state.

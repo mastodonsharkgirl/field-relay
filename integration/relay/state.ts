@@ -340,6 +340,11 @@ class SqliteRelayStore implements RelayStore {
       httpStatus: nullableNumber(row.http_status),
       nextAttemptAt: nullableNumber(row.next_attempt_at),
       reason: nullableString(row.reason),
+      scheduledDelayMs:
+        ['retry_scheduled', 'retry_schedule_ignored'].includes(String(row.kind)) &&
+        row.next_attempt_at !== null
+          ? asNumber(row.next_attempt_at) - asNumber(row.at)
+          : null,
       observed: nullableString(row.observed) as AuditEvent['observed'],
       vendorOrderId: nullableString(row.vendor_order_id),
       requestId: nullableString(row.request_id),
@@ -560,6 +565,23 @@ class SqliteRelayStore implements RelayStore {
         receipt !== null && !receiptConflict && canApplyState ? receipt.vendorOrderId : null,
       requestId: reservation?.requestId ?? inspectionRequestId,
     });
+    if (observation.retryReason)
+      this.#event(
+        jobId,
+        !receiptConflict && outcome !== 'delivered' && nextAttemptAt === observation.nextAttemptAt
+          ? 'retry_scheduled'
+          : 'retry_schedule_ignored',
+        now,
+        {
+          attempt: reservation?.attempt ?? null,
+          outcome,
+          observed,
+          httpStatus: observation.httpStatus,
+          nextAttemptAt: observation.nextAttemptAt,
+          reason: observation.retryReason,
+          requestId: reservation?.requestId ?? inspectionRequestId,
+        },
+      );
     return this.#snapshot(this.#row(jobId));
   }
 
@@ -665,6 +687,24 @@ class SqliteRelayStore implements RelayStore {
         vendorOrderId: null,
         requestId: admission.requestId,
       });
+      if (result.retryReason)
+        this.#event(
+          admission.jobId,
+          !receiptConflict && outcome !== 'delivered' && nextAttemptAt === result.nextAttemptAt
+            ? 'retry_scheduled'
+            : 'retry_schedule_ignored',
+          now,
+          {
+            attempt: admission.attempt,
+            approvalRevision: admission.approvalRevision,
+            outcome,
+            observed,
+            httpStatus: result.httpStatus,
+            nextAttemptAt: result.nextAttemptAt,
+            reason: result.retryReason,
+            requestId: admission.requestId,
+          },
+        );
       return persisted;
     });
     if (expired) throw Error('admission lease expired; readback is required');

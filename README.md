@@ -10,7 +10,7 @@ The repository also contains two separate fictional learning exercises: the exis
 
 ## Local HTTP exercise
 
-Development checkpoint, 15 October 2026: the launcher and focused failure checks work locally. Full integration aggregation, full application QA and final branch review are still pending. See the [release checkpoint](docs/integration/RELEASE.md) before describing this as a completed release.
+Local verification, 15 October 2026: integration aggregation, application QA and clean scripted walkthrough/resume have passed. Scoped implementation review is approved; final whole-branch review is recorded in the [release record](docs/integration/RELEASE.md). This is a synthetic local prototype, not a production release.
 
 Prerequisites: installed repository dependencies, Node 24.11 or compatible Node 25, and Python 3.14 available through the Windows `py` launcher. The tested Node 24.11 SQLite API emits an experimental warning. The lab starts a hidden Python mock supplier on an OS-assigned `127.0.0.1` port and separate Node relay processes.
 
@@ -24,7 +24,7 @@ npm run integration:demo -- --scripted
 # Reopen the printed run ID with fresh session credentials
 npm run integration:demo -- --scripted --resume RUN_ID
 
-# Acceptance commands; final aggregate results are pending
+# Integration verification commands
 npm run integration:check
 npm run integration:test
 ```

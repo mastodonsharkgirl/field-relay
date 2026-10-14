@@ -1,6 +1,6 @@
 # Local verification record — 15 October 2026
 
-The local integration and application gates pass at implementation commit `478a2079ca14be39583de3b684827b6a6e19b570`. The clean scripted walkthrough and resume both pass. Scoped re-review and final whole-branch review remain pending; this is not a production release.
+The local integration and application gates pass at implementation commit `478a2079ca14be39583de3b684827b6a6e19b570`. Subsequent bounded fixes, the clean scripted walkthrough and resume pass as qualified below. Scoped re-review approved final implementation `3813cc0` with zero findings. Final whole-branch review remains pending; this is not a production release.
 
 At the user's request, this chat checked Compass and verified its completion and explicit compute release. The coordinator subsequently assigned the slot to Field Relay after project #10 stopped at its resource preflight. Verification ran serially with one worker. No unrelated process was stopped and no model inference was run.
 
@@ -52,9 +52,8 @@ The execution ledger and logs remain under ignored `.superpowers/sdd/2026-10-13-
 
 ## Remaining acceptance
 
-1. Complete scoped re-review of the Task 5 reporting and lifecycle fixes.
-2. Complete independent whole-branch review and record its disposition.
-3. Commit the documentation/evidence handoff and save the explicit compute release receipt after owned processes have ended.
+1. Complete independent whole-branch review and record its disposition.
+2. Commit the final documentation/evidence handoff. The compute release receipt is already saved; any subsequent focused repair cleanup will be recorded separately.
 
 ## Known limits
 

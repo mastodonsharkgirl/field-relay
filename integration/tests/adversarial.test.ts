@@ -207,6 +207,13 @@ test('walkthrough holds changed payload, stops after 429 revocation and reports 
   assert.equal(evidence.metadata.credentialScanPassed, true);
   assert.equal(evidence.metadata.cleanupVerified, true);
   assert.equal(evidence.status, 'passed');
+  const { renderEvidence } = await import('../relay/evidence.ts');
+  assert.equal(
+    evidence.events.find((event) => event.kind === 'retry_scheduled' && event.httpStatus === 429)
+      ?.reason,
+    'retry_after',
+  );
+  assert.match(renderEvidence(evidence).markdown, /retry_after \| 1000/);
   assert.match(evidence.metadata.commands[0], /^launchExercise\(/);
   const timeoutUpper = evidence.scenarioResults[0].checks?.find(
     (check) =>

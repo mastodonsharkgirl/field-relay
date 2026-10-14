@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import { parseReceipt } from './contract.ts';
-import { isRetryableStatus, retryDecision } from './retry.ts';
+import { isRetryableStatus, retryDecision, type RetryDecision } from './retry.ts';
 import type { JobSnapshot, ReadObservation, RelayStore } from './state-types.ts';
 import { exchange, type HttpResult, type VendorConnection } from './transport.ts';
 
@@ -75,12 +75,14 @@ const unknownObservation = (
   httpStatus: number | null,
   nextAttemptAt: number | null,
   deferred: boolean,
+  retryReason?: RetryDecision['reason'],
 ): ReadObservation => ({
   kind: 'unknown',
   reason,
   httpStatus,
   nextAttemptAt,
   ...(deferred ? { holdReason: 'deferred_outside_deadline' as const } : {}),
+  ...(retryReason ? { retryReason } : {}),
 });
 
 const retryRead = (
@@ -107,6 +109,7 @@ const retryRead = (
       httpStatus,
       decision.nextAttemptAt,
       decision.kind === 'deferred_outside_deadline',
+      decision.reason,
     ),
     now,
   );
@@ -243,6 +246,7 @@ const settlePostRetry = (
         httpStatus: metadata.status,
         nextAttemptAt: decision.nextAttemptAt,
         claimedReceipt: null,
+        retryReason: decision.reason,
         ...(decision.kind === 'deferred_outside_deadline'
           ? { holdReason: 'deferred_outside_deadline' as const }
           : {}),

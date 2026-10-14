@@ -1,4 +1,5 @@
 import type { Order, OrderIdentity, VendorReceipt } from './contract.ts';
+import type { RetryDecision } from './retry.ts';
 
 export type ApprovalState = 'pending' | 'approved' | 'revoked';
 export type ObservedState = 'unknown' | 'absent' | 'present';
@@ -79,7 +80,7 @@ export type ReadObservation = (
       httpStatus: number | null;
       nextAttemptAt: number | null;
     }
-) & { holdReason?: 'deferred_outside_deadline' };
+) & { holdReason?: 'deferred_outside_deadline'; retryReason?: RetryDecision['reason'] };
 
 export type AttemptResult = {
   classification: 'retryable' | 'permanent_failure' | 'unknown';
@@ -87,6 +88,7 @@ export type AttemptResult = {
   nextAttemptAt: number | null;
   claimedReceipt: VendorReceipt | null;
   holdReason?: 'deferred_outside_deadline';
+  retryReason?: RetryDecision['reason'];
 };
 
 export type AuditEvent = {
@@ -98,6 +100,8 @@ export type AuditEvent = {
     | 'revoked'
     | 'post_reserved'
     | 'post_settled'
+    | 'retry_scheduled'
+    | 'retry_schedule_ignored'
     | 'read_reserved'
     | 'read_settled'
     | 'operator_inspection'
@@ -110,6 +114,7 @@ export type AuditEvent = {
   outcome: Outcome | null;
   httpStatus: number | null;
   nextAttemptAt: number | null;
+  scheduledDelayMs: number | null;
   reason: string | null;
   observed: ObservedState | null;
   vendorOrderId: string | null;
