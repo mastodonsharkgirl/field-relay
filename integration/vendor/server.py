@@ -18,7 +18,10 @@ REQUEST_ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '429_huge_retry_after', '503_once', '401', '403', '422', 'timeout_before_commit', 'timeout_after_commit', 'malformed_success', 'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'hold_after_commit', 'rollback_transaction', 'redirect', 'slow_body', 'oversized_response'}
 
 
-READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked'}
+SCENARIOS.update({'malformed_success_absent', 'wrong_content_type_success', 'malformed_429',
+                  'malformed_401', 'malformed_403', 'malformed_422', 'malformed_500',
+                  'claimed_receipt_mismatch'})
+READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'claimed_receipt_mismatch'}
 
 
 class DeadlineReader:
@@ -112,6 +115,17 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             self.send_header('Content-Length', '0')
             self.end_headers()
 
+        def _malformed_response(self, action):
+            status = 200 if action == 'malformed_success_absent' else 201 if action == 'wrong_content_type_success' else int(action.removeprefix('malformed_'))
+            body = b'not-json' if action == 'wrong_content_type_success' else b'{'
+            self.send_response(status)
+            self.send_header('Content-Type', 'text/plain' if action == 'wrong_content_type_success' else 'application/json')
+            self.send_header('Cache-Control', 'no-store')
+            if status == 429: self.send_header('Retry-After', '1')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def _slow_json(self, status, value):
             body = json.dumps(value, separators=(',', ':')).encode()
             split = max(1, len(body) // 2)
@@ -188,12 +202,17 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             prefix = '/v1/orders/'
             if self.path.startswith(prefix) and KEY.fullmatch(self.path[len(prefix):]):
                 key = self.path[len(prefix):]
-                action, _ = store.consume_scenario(key, 'get')
+                request_id = self._request_id()
+                if request_id is None: return
+                action, _ = store.consume_scenario(key, 'get', request_id)
                 if action == 'readback_unavailable': self._error(503, 'synthetic_readback_unavailable'); return
                 if action == 'readback_blocked': self._error(423, 'synthetic_readback_blocked'); return
                 receipt = store.get_order(key)
                 if action == 'mismatched_readback' and receipt:
                     receipt['payloadDigest'] = '0' * 64
+                    self._json(200, receipt)
+                elif action == 'claimed_receipt_mismatch' and receipt:
+                    receipt['vendorOrderId'] = 'vendor-other-confirmation'
                     self._json(200, receipt)
                 elif receipt: self._json(200, receipt)
                 else: self._error(404, 'not_found')
@@ -239,7 +258,9 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
             if body is None: return
             try: order = decode_order(body)
             except ValueError: self._error(422, 'invalid_order', request_id); return
-            action, _ = store.consume_scenario(key, 'post')
+            action, _ = store.consume_scenario(key, 'post', request_id)
+            if action in {'malformed_success_absent', 'wrong_content_type_success', 'malformed_429', 'malformed_401', 'malformed_403', 'malformed_422', 'malformed_500'}:
+                self._malformed_response(action); return
             faults = {'429': 429, '503': 503, '401': 401, '403': 403, '422': 422}
             if action == '429_huge_retry_after':
                 self._error(429, 'synthetic_429_huge_retry_after', request_id, '9' * 256); return

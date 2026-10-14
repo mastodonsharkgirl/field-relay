@@ -169,10 +169,13 @@ class VendorStore:
         finally:
             connection.close()
 
-    def consume_scenario(self, key: str, route: Literal['post', 'get']) -> tuple[str, int]:
+    def consume_scenario(self, key: str, route: Literal['post', 'get'], request_id: str | None = None) -> tuple[str, int]:
         connection = self._connect()
         try:
             connection.execute('BEGIN IMMEDIATE')
+            if request_id is not None:
+                connection.execute('INSERT INTO request_audit(request_id,idempotency_key,event,created_at) VALUES(?,?,?,?)',
+                                   (request_id, key, route + '_received', self._now()))
             row = connection.execute('SELECT * FROM scenarios WHERE idempotency_key=?', (key,)).fetchone()
             if not row:
                 connection.commit(); return 'healthy', 0
@@ -203,7 +206,9 @@ class VendorStore:
         connection = self._connect()
         try:
             row = connection.execute('SELECT post_index,get_index,post_request_count,get_request_count FROM scenarios WHERE idempotency_key=?', (key,)).fetchone()
-            return {'phase': 'configured' if row else 'healthy', 'sequence': {'post': row['post_index'], 'get': row['get_index']} if row else {'post': 0, 'get': 0}, 'requestCount': {'post': row['post_request_count'], 'get': row['get_request_count']} if row else {'post': 0, 'get': 0}}
+            requests = connection.execute("SELECT request_id,event FROM request_audit WHERE idempotency_key=? AND event IN ('post_received','get_received') ORDER BY id DESC LIMIT 200", (key,)).fetchall()
+            return {'phase': 'configured' if row else 'healthy', 'sequence': {'post': row['post_index'], 'get': row['get_index']} if row else {'post': 0, 'get': 0}, 'requestCount': {'post': row['post_request_count'], 'get': row['get_request_count']} if row else {'post': 0, 'get': 0},
+                    'requestIds': {route: [item['request_id'] for item in reversed(requests) if item['event'] == route + '_received'] for route in ('post', 'get')}}
         finally:
             connection.close()
 

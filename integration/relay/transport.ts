@@ -10,8 +10,13 @@ export type HttpResult =
       retryAfter: string | null;
       elapsedMs: number;
     }
-  | { kind: 'timeout'; elapsedMs: number }
-  | { kind: 'network_error'; elapsedMs: number }
+  | { kind: 'timeout'; httpStatus: number | null; retryAfter: string | null; elapsedMs: number }
+  | {
+      kind: 'network_error';
+      httpStatus: number | null;
+      retryAfter: string | null;
+      elapsedMs: number;
+    }
   | {
       kind: 'protocol_error';
       reason:
@@ -21,6 +26,8 @@ export type HttpResult =
         | 'invalid_content_type'
         | 'invalid_json'
         | 'response_too_large';
+      httpStatus: number | null;
+      retryAfter: string | null;
       elapsedMs: number;
     };
 
@@ -155,6 +162,8 @@ export const exchange = async (
   const invalid = (reason: 'invalid_connection' | 'invalid_request'): HttpResult => ({
     kind: 'protocol_error',
     reason,
+    httpStatus: null,
+    retryAfter: null,
     elapsedMs: elapsed(startedAt),
   });
   if (!validConnection(connection)) return invalid('invalid_connection');
@@ -163,6 +172,10 @@ export const exchange = async (
 
   const controller = new globalThis.AbortController();
   const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  let metadata: { httpStatus: number | null; retryAfter: string | null } = {
+    httpStatus: null,
+    retryAfter: null,
+  };
   try {
     const headers = new globalThis.Headers(encoded.headers);
     headers.set('Authorization', 'Bearer ' + connection.token);
@@ -178,32 +191,60 @@ export const exchange = async (
         cache: 'no-store',
       },
     );
+    metadata = {
+      httpStatus: response.status,
+      retryAfter: boundedRetryAfter(response.headers.get('retry-after')),
+    };
     if (response.status >= 300 && response.status < 400) {
-      return { kind: 'protocol_error', reason: 'redirect_refused', elapsedMs: elapsed(startedAt) };
+      return {
+        kind: 'protocol_error',
+        reason: 'redirect_refused',
+        ...metadata,
+        elapsedMs: elapsed(startedAt),
+      };
     }
     const contentType = response.headers.get('content-type');
     if (contentType?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
       return {
         kind: 'protocol_error',
         reason: 'invalid_content_type',
+        ...metadata,
         elapsedMs: elapsed(startedAt),
       };
     }
-    const body = await readBoundedJson(response.body);
-    const retryAfter = boundedRetryAfter(response.headers.get('retry-after'));
+    let body: unknown;
+    try {
+      body = await readBoundedJson(response.body);
+    } catch (error) {
+      if (error instanceof ProtocolError) {
+        return {
+          kind: 'protocol_error',
+          reason: error.reason,
+          ...metadata,
+          elapsedMs: elapsed(startedAt),
+        };
+      }
+      throw error;
+    }
     return {
       kind: 'response',
       status: response.status,
       body,
-      retryAfter,
+      retryAfter: metadata.retryAfter,
       elapsedMs: elapsed(startedAt),
     };
   } catch (error) {
     if (error instanceof ProtocolError) {
-      return { kind: 'protocol_error', reason: error.reason, elapsedMs: elapsed(startedAt) };
+      return {
+        kind: 'protocol_error',
+        reason: error.reason,
+        ...metadata,
+        elapsedMs: elapsed(startedAt),
+      };
     }
-    if (controller.signal.aborted) return { kind: 'timeout', elapsedMs: elapsed(startedAt) };
-    return { kind: 'network_error', elapsedMs: elapsed(startedAt) };
+    if (controller.signal.aborted)
+      return { kind: 'timeout', ...metadata, elapsedMs: elapsed(startedAt) };
+    return { kind: 'network_error', ...metadata, elapsedMs: elapsed(startedAt) };
   } finally {
     globalThis.clearTimeout(timer);
   }

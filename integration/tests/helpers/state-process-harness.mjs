@@ -70,7 +70,12 @@ const runWorker = async () => {
           throw Error('state process harness cannot settle without an admission');
         const result = store.settle(
           admission,
-          { classification: 'retryable', httpStatus: 503, nextAttemptAt: null, receipt: null },
+          {
+            classification: 'retryable',
+            httpStatus: 503,
+            nextAttemptAt: null,
+            claimedReceipt: null,
+          },
           commandNow(command),
         );
         admission = null;

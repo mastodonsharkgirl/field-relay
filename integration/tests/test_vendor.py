@@ -173,7 +173,7 @@ class VendorHttpTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def request(self, method, path, body=None, token=None, extra=None):
-        headers = {'Host': f'127.0.0.1:{self.port}'}
+        headers = {'Host': f'127.0.0.1:{self.port}', 'X-Request-Id': 'python-http-test'}
         if token is not None:
             headers['Authorization'] = f'Bearer {token}'
         headers.update(extra or {})
@@ -183,6 +183,19 @@ class VendorHttpTests(unittest.TestCase):
             response = connection.getresponse()
             data = response.read()
             return response.status, dict(response.getheaders()), json.loads(data) if data else None
+        finally:
+            connection.close()
+
+    def raw_request(self, method, path, body=None, token=None, extra=None):
+        headers = {'Host': f'127.0.0.1:{self.port}', 'X-Request-Id': 'python-http-test'}
+        if token is not None:
+            headers['Authorization'] = f'Bearer {token}'
+        headers.update(extra or {})
+        connection = http.client.HTTPConnection('127.0.0.1', self.port, timeout=2)
+        try:
+            connection.request(method, path, body=body, headers=headers)
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
         finally:
             connection.close()
 
@@ -300,7 +313,8 @@ class VendorHttpTests(unittest.TestCase):
         self.assertEqual(self.request('GET', '/v1/orders', token=self.token)[2]['count'], 0)
         connection = sqlite3.connect(self.state / 'vendor.sqlite')
         try:
-            self.assertEqual(connection.execute('SELECT COUNT(*) FROM request_audit').fetchone()[0], 0)
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM request_audit WHERE event IN ('committed','replay')").fetchone()[0], 0)
+            self.assertEqual(connection.execute("SELECT event FROM request_audit ORDER BY id").fetchall(), [('post_received',), ('get_received',)])
         finally:
             connection.close()
         self.assertEqual(self.request('POST', '/v1/orders', json.dumps(ORDER).encode(), self.token, self.order_headers())[0], 201)
@@ -375,6 +389,42 @@ class VendorHttpTests(unittest.TestCase):
         status, _, response = self.request('POST', '/v1/orders', json.dumps(oversized).encode(), self.token, self.order_headers(oversized))
         self.assertEqual(status, 201)
         self.assertEqual(len(response['padding']), 64 * 1024)
+
+    def test_fixed_malformed_transport_faults_preserve_status_without_committing(self):
+        cases = (
+            ('malformed_success_absent', 200, 'application/json'),
+            ('wrong_content_type_success', 201, 'text/plain'),
+            ('malformed_429', 429, 'application/json'),
+            ('malformed_401', 401, 'application/json'),
+            ('malformed_403', 403, 'application/json'),
+            ('malformed_422', 422, 'application/json'),
+            ('malformed_500', 500, 'application/json'),
+        )
+        for index, (scenario, expected_status, expected_content_type) in enumerate(cases):
+            order = {**ORDER, 'orderId': f'MALFORMED-{index}'}
+            key = identify(order)['idempotencyKey']
+            self.assertEqual(self.configure(key, [scenario])[0], 200)
+            status, headers, body = self.raw_request(
+                'POST',
+                '/v1/orders',
+                json.dumps(order).encode(),
+                self.token,
+                self.order_headers(order),
+            )
+            self.assertEqual(status, expected_status)
+            self.assertEqual(headers['Content-Type'], expected_content_type)
+            self.assertIn(body, (b'{', b'not-json'))
+            if scenario == 'malformed_429': self.assertEqual(headers['Retry-After'], '1')
+            self.assertEqual(self.request('GET', '/v1/orders/' + key, token=self.token)[0], 404)
+
+    def test_claimed_receipt_mismatch_is_an_allowlisted_readback_fault(self):
+        order = {**ORDER, 'orderId': 'CLAIMED-RECEIPT-MISMATCH'}
+        key = identify(order)['idempotencyKey']
+        self.assertEqual(self.configure(key, ['claimed_receipt_mismatch'])[0], 200)
+        created = self.request('POST', '/v1/orders', json.dumps(order).encode(), self.token, self.order_headers(order))[2]
+        mismatched = self.request('GET', '/v1/orders/' + key, token=self.token)[2]
+        self.assertEqual(mismatched['order'], order)
+        self.assertNotEqual(mismatched['vendorOrderId'], created['vendorOrderId'])
 
     def test_http_capacity_and_independent_clients(self):
         statuses = []

@@ -73,9 +73,26 @@ test('healthy dispatch persists exact HTTP readback before delivery and operator
       assert.equal(delivered.receipt?.idempotencyKey, identity.idempotencyKey);
       await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 1);
 
+      const events = store.events(jobId);
+      const postReserved = events.find((event) => event.kind === 'post_reserved');
+      const postSettled = events.find((event) => event.kind === 'post_settled');
+      const readReserved = events.find((event) => event.kind === 'read_reserved');
+      const readSettled = events.find((event) => event.kind === 'read_settled');
+      assert.ok(postReserved?.requestId);
+      assert.equal(postSettled?.requestId, postReserved?.requestId);
+      assert.ok(readReserved?.requestId);
+      assert.equal(readSettled?.requestId, readReserved?.requestId);
+      const wireEvidence = await vendor.observe(identity.idempotencyKey);
+      assert.deepEqual(wireEvidence.requestIds, {
+        post: [postReserved?.requestId],
+        get: [readReserved?.requestId],
+      });
+
       const inspected = await inspectOrder(store, jobId, vendor.connection);
       assert.equal(inspected.outcome, 'delivered');
       assert.equal(store.events(jobId).at(-1)?.kind, 'operator_inspection');
+      const inspectedRequests = await vendor.observe(identity.idempotencyKey);
+      assert.equal(store.events(jobId).at(-1)?.requestId, inspectedRequests.requestIds.get.at(-1));
       await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 2);
     });
   });
@@ -187,6 +204,8 @@ test('a permanent vendor failure settles without an automatic retry', async () =
     await vendor.configure(identity.idempotencyKey, ['422']);
     await withApprovedJob(vendor, order, async (store, jobId) => {
       const result = await dispatch(store, jobId, vendor.connection, 'worker-permanent');
+      const repeated = await dispatch(store, jobId, vendor.connection, 'worker-permanent-repeat');
+      assert.equal(repeated.postReservations, 1);
       assert.equal(result.outcome, 'permanent_failure');
       assert.equal(result.postReservations, 1);
       assert.equal(result.getReservations, 0);
@@ -225,6 +244,108 @@ test('a malformed success only becomes delivered after a valid readback', async 
       const result = await dispatch(store, jobId, vendor.connection, 'worker-malformed');
       assert.equal(result.outcome, 'delivered');
       assert.deepEqual(result.receipt?.order, order);
+      await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 1);
+    });
+  });
+});
+
+test('an uncommitted malformed 2xx is read back once and held instead of being blindly resent', async () => {
+  await withVendor(async (vendor) => {
+    const order = orderFor('HTTP-MALFORMED-ABSENT');
+    const identity = identify(order);
+    await vendor.configure(identity.idempotencyKey, ['malformed_success_absent']);
+    await withApprovedJob(vendor, order, async (store, jobId) => {
+      const result = await dispatch(store, jobId, vendor.connection, 'worker-malformed-absent');
+      assert.equal(result.outcome, 'unknown');
+      assert.equal(result.holdReason, 'integrity_failure');
+      await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 1);
+    });
+  });
+});
+
+test('malformed terminal status responses settle permanently without automatic retry', async () => {
+  await withVendor(async (vendor) => {
+    for (const [scenario, status] of [
+      ['malformed_401', 401],
+      ['malformed_403', 403],
+      ['malformed_422', 422],
+      ['malformed_500', 500],
+    ] as const) {
+      const order = orderFor('HTTP-' + scenario.toUpperCase());
+      const identity = identify(order);
+      await vendor.configure(identity.idempotencyKey, [scenario]);
+      await withApprovedJob(vendor, order, async (store, jobId) => {
+        const result = await dispatch(store, jobId, vendor.connection, 'worker-' + scenario);
+        assert.equal(result.outcome, 'permanent_failure');
+        assert.equal(result.postReservations, 1);
+        assert.equal(result.getReservations, 0);
+        assert.equal(
+          store.events(jobId).find((event) => event.kind === 'post_settled')?.httpStatus,
+          status,
+        );
+        await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 0);
+      });
+    }
+  });
+});
+
+test('a malformed 429 preserves Retry-After through the next reconciliation request', async (t) => {
+  await withVendor(async (vendor) => {
+    const order = orderFor('HTTP-MALFORMED-429');
+    const identity = identify(order);
+    await vendor.configure(identity.idempotencyKey, ['malformed_429']);
+    await withApprovedJob(vendor, order, async (store, jobId) => {
+      const result = await dispatch(store, jobId, vendor.connection, 'worker-malformed-429');
+      assert.equal(result.outcome, 'delivered');
+      await assertScenarioCounts(vendor, identity.idempotencyKey, 2, 2);
+      const events = store.events(jobId);
+      const limited = events.find(
+        (event) => event.kind === 'post_settled' && event.httpStatus === 429,
+      );
+      const reconciliation = events.find(
+        (event) => event.kind === 'read_reserved' && limited !== undefined && event.at > limited.at,
+      );
+      assert.ok(limited?.nextAttemptAt !== null && limited?.nextAttemptAt !== undefined);
+      assert.ok(reconciliation);
+      if (!limited || !reconciliation || limited.nextAttemptAt === null) {
+        throw Error('expected a scheduled malformed-429 reconciliation');
+      }
+      const requested = limited.nextAttemptAt - limited.at;
+      const actual = reconciliation.at - limited.at;
+      assert.ok(
+        Math.abs(actual - requested) <= schedulerToleranceMs,
+        'expected ' + String(requested) + 'ms delay, saw ' + String(actual) + 'ms',
+      );
+      t.diagnostic(
+        'malformed 429 requested ' +
+          String(requested) +
+          'ms; readback began after ' +
+          String(actual) +
+          'ms.',
+      );
+    });
+  });
+});
+
+test('a claimed POST receipt that disagrees with a valid readback is held without a second POST', async () => {
+  await withVendor(async (vendor) => {
+    const order = orderFor('HTTP-CLAIMED-RECEIPT-MISMATCH');
+    const identity = identify(order);
+    await vendor.configure(identity.idempotencyKey, ['claimed_receipt_mismatch']);
+    await withApprovedJob(vendor, order, async (store, jobId) => {
+      const result = await dispatch(store, jobId, vendor.connection, 'worker-claimed-mismatch');
+      assert.equal(result.outcome, 'unknown');
+      assert.equal(result.holdReason, 'integrity_failure');
+      assert.equal(result.receipt, null);
+      assert.ok(result.claimedReceipt);
+      assert.equal(
+        store.events(jobId).find((event) => event.kind === 'post_settled')?.vendorOrderId,
+        null,
+      );
+      assert.equal(
+        store.events(jobId).find((event) => event.kind === 'read_settled')?.vendorOrderId,
+        null,
+      );
       await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 1);
     });
   });
@@ -312,6 +433,9 @@ test('the total transport deadline includes a slowly streamed response body', as
     });
     const elapsed = Date.now() - startedAt;
     assert.equal(result.kind, 'timeout');
+    if (result.kind !== 'timeout') throw Error('expected complete-body timeout');
+    assert.equal(result.httpStatus, 201);
+    assert.equal(result.retryAfter, null);
     assert.ok(elapsed >= 650 && elapsed <= 1_100, 'expected a bounded whole-body timeout');
     await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 0);
     t.diagnostic('slow-body timeout observed after ' + String(elapsed) + 'ms.');
@@ -333,6 +457,29 @@ test('the response byte cap rejects an oversized body after response headers', a
     assert.equal(result.kind, 'protocol_error');
     if (result.kind !== 'protocol_error') throw Error('expected an oversized protocol error');
     assert.equal(result.reason, 'response_too_large');
+    assert.equal(result.httpStatus, 201);
+    assert.equal(result.retryAfter, null);
+    await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 0);
+  });
+});
+
+test('a content-type failure preserves only the bounded status metadata from a real response', async () => {
+  await withVendor(async (vendor) => {
+    const order = orderFor('HTTP-WRONG-CONTENT-TYPE');
+    const identity = identify(order);
+    await vendor.configure(identity.idempotencyKey, ['wrong_content_type_success']);
+    const result = await exchange(vendor.connection, {
+      method: 'POST',
+      path: '/v1/orders',
+      requestId: 'wrong-content-type-post',
+      order,
+      key: identity.idempotencyKey,
+    });
+    assert.equal(result.kind, 'protocol_error');
+    if (result.kind !== 'protocol_error') throw Error('expected a content-type protocol error');
+    assert.equal(result.reason, 'invalid_content_type');
+    assert.equal(result.httpStatus, 201);
+    assert.equal(result.retryAfter, null);
     await assertScenarioCounts(vendor, identity.idempotencyKey, 1, 0);
   });
 });

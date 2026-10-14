@@ -13,6 +13,8 @@ type ReadStep =
     }
   | { kind: 'blocked'; snapshot: JobSnapshot };
 
+type ResponseMetadata = { status: number | null; retryAfter: string | null };
+
 const currentTime = () => Date.now();
 
 const requiresReconciliation = (snapshot: JobSnapshot) =>
@@ -38,6 +40,21 @@ const waitForDue = async (store: RelayStore, jobId: string) => {
   }
   return store.snapshot(jobId);
 };
+
+const metadataFor = (result: HttpResult): ResponseMetadata => {
+  if (result.kind === 'response') {
+    return { status: result.status, retryAfter: result.retryAfter };
+  }
+  return { status: result.httpStatus, retryAfter: result.retryAfter };
+};
+
+const isAmbiguousSuccess = (status: number | null) =>
+  status !== null && status >= 200 && status < 300;
+
+const isRetryableResult = (result: HttpResult, status: number | null) =>
+  status !== null
+    ? isRetryableStatus(status)
+    : result.kind === 'timeout' || result.kind === 'network_error';
 
 const unknownObservation = (
   reason: Extract<ReadObservation, { kind: 'unknown' }>['reason'],
@@ -85,6 +102,21 @@ const retryRead = (
   };
 };
 
+const readbackIntegrity = (
+  store: RelayStore,
+  jobId: string,
+  reservation: Extract<ReturnType<RelayStore['reserveRead']>, { kind: 'read_reserved' }>,
+  status: number | null,
+  now: number,
+) => {
+  const settled = store.settleRead(
+    reservation,
+    unknownObservation('readback_mismatch', status, null, false),
+    now,
+  );
+  return store.hold(jobId, 'integrity_failure', now) ?? settled;
+};
+
 const readVendor = async (
   store: RelayStore,
   jobId: string,
@@ -93,8 +125,9 @@ const readVendor = async (
 ): Promise<ReadStep> => {
   const reservation = store.reserveRead(jobId, currentTime());
   if (reservation.kind === 'blocked') {
-    if (reservation.reason === 'not_due')
+    if (reservation.reason === 'not_due') {
       return { kind: 'not_due', snapshot: store.snapshot(jobId) };
+    }
     if (
       reservation.reason === 'read_budget_exhausted' ||
       reservation.reason === 'deadline_expired'
@@ -114,62 +147,61 @@ const readVendor = async (
     key: snapshot.identity.idempotencyKey,
   });
   const now = currentTime();
-  if (result.kind === 'response' && result.status === 200) {
-    try {
-      const receipt = parseReceipt(result.body, snapshot.order, snapshot.vendorStoreId);
-      return {
-        kind: 'present',
-        snapshot: store.settleRead(
-          reservation,
-          { kind: 'present', receipt, httpStatus: result.status, nextAttemptAt: null },
-          now,
-        ),
-      };
-    } catch {
-      const settled = store.settleRead(
-        reservation,
-        unknownObservation('readback_mismatch', result.status, null, false),
-        now,
-      );
-      return {
-        kind: 'integrity',
-        snapshot: store.hold(jobId, 'integrity_failure', now) ?? settled,
-      };
+  const metadata = metadataFor(result);
+  if (metadata.status === 200) {
+    if (result.kind === 'response') {
+      try {
+        const receipt = parseReceipt(result.body, snapshot.order, snapshot.vendorStoreId);
+        return {
+          kind: 'present',
+          snapshot: store.settleRead(
+            reservation,
+            { kind: 'present', receipt, httpStatus: metadata.status, nextAttemptAt: null },
+            now,
+          ),
+        };
+      } catch {
+        return {
+          kind: 'integrity',
+          snapshot: readbackIntegrity(store, jobId, reservation, metadata.status, now),
+        };
+      }
     }
+    return {
+      kind: 'integrity',
+      snapshot: readbackIntegrity(store, jobId, reservation, metadata.status, now),
+    };
   }
-  if (result.kind === 'response' && result.status === 404) {
+  if (metadata.status === 404) {
     const settled = store.settleRead(
       reservation,
-      { kind: 'absent', httpStatus: result.status, nextAttemptAt: null },
+      { kind: 'absent', httpStatus: metadata.status, nextAttemptAt: null },
       now,
     );
     return {
-      kind: requireVerifiedReceipt ? 'integrity' : 'absent',
+      kind: requireVerifiedReceipt
+        ? 'integrity'
+        : settled.postReservations !== reservation.generation || settled.observed !== 'absent'
+          ? 'scheduled'
+          : 'absent',
       snapshot: requireVerifiedReceipt ? store.hold(jobId, 'integrity_failure', now) : settled,
     };
   }
-  const retryable = result.kind !== 'response' || isRetryableStatus(result.status);
-  if (retryable) {
-    const reason =
-      result.kind === 'response'
-        ? 'vendor_unavailable'
-        : result.kind === 'protocol_error'
-          ? 'protocol_failure'
-          : 'network_failure';
+  if (isRetryableResult(result, metadata.status)) {
     return retryRead(
       store,
       jobId,
       reservation,
       snapshot,
-      reason,
-      result.kind === 'response' ? result.status : null,
-      result.kind === 'response' ? result.retryAfter : null,
+      metadata.status === null ? 'network_failure' : 'vendor_unavailable',
+      metadata.status,
+      metadata.retryAfter,
       now,
     );
   }
   const settled = store.settleRead(
     reservation,
-    unknownObservation('protocol_failure', result.status, null, false),
+    unknownObservation('protocol_failure', metadata.status, null, false),
     now,
   );
   return { kind: 'integrity', snapshot: store.hold(jobId, 'integrity_failure', now) ?? settled };
@@ -178,14 +210,14 @@ const readVendor = async (
 const settlePostRetry = (
   store: RelayStore,
   admission: Extract<ReturnType<RelayStore['reservePost']>, { kind: 'admitted' }>,
-  result: HttpResult,
+  metadata: ResponseMetadata,
   now: number,
 ) => {
   const decision = retryDecision({
     attempt: admission.attempt,
     now,
     deadlineAt: admission.deadlineAt,
-    retryAfter: result.kind === 'response' ? result.retryAfter : null,
+    retryAfter: metadata.retryAfter,
     random: Math.random(),
   });
   return {
@@ -194,9 +226,9 @@ const settlePostRetry = (
       admission,
       {
         classification: 'retryable',
-        httpStatus: result.kind === 'response' ? result.status : null,
+        httpStatus: metadata.status,
         nextAttemptAt: decision.nextAttemptAt,
-        receipt: null,
+        claimedReceipt: null,
         ...(decision.kind === 'deferred_outside_deadline'
           ? { holdReason: 'deferred_outside_deadline' as const }
           : {}),
@@ -260,32 +292,36 @@ export const dispatch = async (
     const result = await exchange(connection, {
       method: 'POST',
       path: '/v1/orders',
-      requestId: randomUUID(),
+      requestId: admission.requestId,
       order: admission.order,
       key: admission.identity.idempotencyKey,
     });
     const now = currentTime();
-    if (result.kind === 'response' && result.status >= 200 && result.status < 300) {
-      try {
-        parseReceipt(result.body, admission.order, connection.storeId);
-      } catch {
-        // A malformed 2xx still needs actual vendor readback before any outcome is trusted.
+    const metadata = metadataFor(result);
+    if (isAmbiguousSuccess(metadata.status)) {
+      let claimedReceipt = null;
+      if (result.kind === 'response') {
+        try {
+          claimedReceipt = parseReceipt(result.body, admission.order, connection.storeId);
+        } catch {
+          // A 2xx without a valid receipt remains ambiguous and must be read back.
+        }
       }
       store.settle(
         admission,
         {
           classification: 'unknown',
-          httpStatus: result.status,
+          httpStatus: metadata.status,
           nextAttemptAt: null,
-          receipt: null,
+          claimedReceipt,
         },
         now,
       );
       reconcile = true;
       continue;
     }
-    if (result.kind !== 'response' || isRetryableStatus(result.status)) {
-      const settled = settlePostRetry(store, admission, result, now);
+    if (isRetryableResult(result, metadata.status)) {
+      const settled = settlePostRetry(store, admission, metadata, now);
       if (settled.decision.kind === 'deferred_outside_deadline') return settled.snapshot;
       reconcile = true;
       continue;
@@ -294,9 +330,9 @@ export const dispatch = async (
       admission,
       {
         classification: 'permanent_failure',
-        httpStatus: result.status,
+        httpStatus: metadata.status,
         nextAttemptAt: null,
-        receipt: null,
+        claimedReceipt: null,
       },
       now,
     );
@@ -314,46 +350,59 @@ export const inspectOrder = async (
     store.recordInspection(jobId, unknownObservation('protocol_failure', null, null, false), now);
     return store.hold(jobId, 'store_mismatch', now);
   }
+  const requestId = randomUUID();
   const result = await exchange(connection, {
     method: 'GET',
     path: '/v1/orders/' + snapshot.identity.idempotencyKey,
-    requestId: randomUUID(),
+    requestId,
     key: snapshot.identity.idempotencyKey,
   });
   const observedAt = currentTime();
-  if (result.kind === 'response' && result.status === 200) {
-    try {
-      const receipt = parseReceipt(result.body, snapshot.order, snapshot.vendorStoreId);
-      return store.recordInspection(
-        jobId,
-        { kind: 'present', receipt, httpStatus: result.status, nextAttemptAt: null },
-        observedAt,
-      );
-    } catch {
-      store.recordInspection(
-        jobId,
-        unknownObservation('readback_mismatch', result.status, null, false),
-        observedAt,
-      );
-      return store.hold(jobId, 'integrity_failure', observedAt);
+  const metadata = metadataFor(result);
+  if (metadata.status === 200) {
+    if (result.kind === 'response') {
+      try {
+        const receipt = parseReceipt(result.body, snapshot.order, snapshot.vendorStoreId);
+        return store.recordInspection(
+          jobId,
+          { kind: 'present', receipt, httpStatus: metadata.status, nextAttemptAt: null },
+          observedAt,
+          requestId,
+        );
+      } catch {
+        store.recordInspection(
+          jobId,
+          unknownObservation('readback_mismatch', metadata.status, null, false),
+          observedAt,
+          requestId,
+        );
+        return store.hold(jobId, 'integrity_failure', observedAt);
+      }
     }
+    store.recordInspection(
+      jobId,
+      unknownObservation('readback_mismatch', metadata.status, null, false),
+      observedAt,
+      requestId,
+    );
+    return store.hold(jobId, 'integrity_failure', observedAt);
   }
-  if (result.kind === 'response' && result.status === 404) {
+  if (metadata.status === 404) {
     return store.recordInspection(
       jobId,
-      { kind: 'absent', httpStatus: result.status, nextAttemptAt: null },
+      { kind: 'absent', httpStatus: metadata.status, nextAttemptAt: null },
       observedAt,
+      requestId,
     );
   }
   const reason =
-    result.kind === 'response'
-      ? 'protocol_failure'
-      : result.kind === 'protocol_error'
-        ? 'protocol_failure'
-        : 'network_failure';
+    metadata.status === null && (result.kind === 'timeout' || result.kind === 'network_error')
+      ? 'network_failure'
+      : 'protocol_failure';
   return store.recordInspection(
     jobId,
-    unknownObservation(reason, result.kind === 'response' ? result.status : null, null, false),
+    unknownObservation(reason, metadata.status, null, false),
     observedAt,
+    requestId,
   );
 };

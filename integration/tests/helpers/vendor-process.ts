@@ -18,6 +18,7 @@ export type ScenarioObservation = {
   phase: 'configured' | 'healthy';
   sequence: { post: number; get: number };
   requestCount: { post: number; get: number };
+  requestIds: { post: string[]; get: string[] };
 };
 
 type Ready = { port: number; instanceId: string; storeId: string };
@@ -41,6 +42,7 @@ const isObservation = (value: unknown): value is ScenarioObservation => {
   const observed = value as Record<string, unknown>;
   const sequence = observed.sequence as Record<string, unknown> | undefined;
   const requestCount = observed.requestCount as Record<string, unknown> | undefined;
+  const requestIds = observed.requestIds as Record<string, unknown> | undefined;
   return (
     (observed.phase === 'configured' || observed.phase === 'healthy') &&
     typeof sequence === 'object' &&
@@ -50,7 +52,16 @@ const isObservation = (value: unknown): value is ScenarioObservation => {
     typeof requestCount === 'object' &&
     requestCount !== null &&
     Number.isInteger(requestCount.post) &&
-    Number.isInteger(requestCount.get)
+    Number.isInteger(requestCount.get) &&
+    typeof requestIds === 'object' &&
+    requestIds !== null &&
+    ['post', 'get'].every(
+      (route) =>
+        Array.isArray(requestIds[route]) &&
+        (requestIds[route] as unknown[]).every(
+          (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id),
+        ),
+    )
   );
 };
 

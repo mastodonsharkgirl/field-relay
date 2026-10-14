@@ -43,7 +43,7 @@ const retry = (nextAttemptAt: number | null): AttemptResult => ({
   classification: 'retryable',
   httpStatus: 503,
   nextAttemptAt,
-  receipt: null,
+  claimedReceipt: null,
 });
 
 const present = (
@@ -353,6 +353,10 @@ test('revocation after admission preserves the admission outcome without restori
     const settled = store.settle(admission, retry(2_000), 1_003);
     assert.equal(settled.approvalState, 'revoked');
     assert.equal(settled.outcome, 'retryable');
+    assert.equal(
+      store.events(approved.jobId).find((event) => event.kind === 'post_settled')?.approvalRevision,
+      admission.approvalRevision,
+    );
     assert.equal(store.reservePost(approved.jobId, 'worker', 2_000).kind, 'blocked');
   } finally {
     store.close();
@@ -457,7 +461,7 @@ test('a same-ID receipt with a changed immutable timestamp is held and the first
   });
 });
 
-test('an admitted worker cannot replace an operator-verified receipt', () => {
+test('an admitted worker claim cannot replace an operator-verified receipt', () => {
   withStore((path) => {
     const store = openRelayStore(path, 'new');
     try {
@@ -471,10 +475,10 @@ test('an admitted worker cannot replace an operator-verified receipt', () => {
       const snapshot = store.settle(
         claim,
         {
-          classification: 'delivered',
+          classification: 'unknown',
           httpStatus: 201,
           nextAttemptAt: null,
-          receipt: conflicting.receipt,
+          claimedReceipt: conflicting.receipt,
         },
         1_003,
       );
@@ -482,7 +486,7 @@ test('an admitted worker cannot replace an operator-verified receipt', () => {
       assert.equal(snapshot.holdReason, 'integrity_failure');
       const postSettled = store.events(claim.jobId).at(-1);
       assert.equal(postSettled?.kind, 'post_settled');
-      assert.equal(postSettled?.vendorOrderId, 'operator-receipt');
+      assert.equal(postSettled?.vendorOrderId, null);
     } finally {
       store.close();
     }
@@ -530,7 +534,7 @@ test('a deferred Retry-After holds every automatic request even with no represen
           classification: 'retryable',
           httpStatus: 429,
           nextAttemptAt: null,
-          receipt: null,
+          claimedReceipt: null,
           holdReason: 'deferred_outside_deadline',
         },
         1_002,
@@ -562,7 +566,7 @@ test('an automatic exact readback, rather than a POST response, promotes deliver
       if (admission.kind !== 'admitted') throw Error('expected admission');
       store.settle(
         admission,
-        { classification: 'unknown', httpStatus: 201, nextAttemptAt: null, receipt: null },
+        { classification: 'unknown', httpStatus: 201, nextAttemptAt: null, claimedReceipt: null },
         1_002,
       );
       const read = store.reserveRead(approved.jobId, 1_003);
@@ -603,6 +607,191 @@ test('an automatic absent readback clears only an expired-lease recovery hold be
   });
 });
 
+test('stale automatic reads cannot erase a later POST retry schedule or admit an early write', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const first = store.reservePost(approved.jobId, 'worker-a', 1_001);
+      if (first.kind !== 'admitted') throw Error('expected initial admission');
+      store.settle(first, retry(null), 1_002);
+
+      const firstRead = store.reserveRead(approved.jobId, 1_003);
+      const staleRead = store.reserveRead(approved.jobId, 1_004);
+      if (firstRead.kind !== 'read_reserved' || staleRead.kind !== 'read_reserved') {
+        throw Error('expected overlapping automatic reads');
+      }
+      store.settleRead(firstRead, { kind: 'absent', httpStatus: 404, nextAttemptAt: null }, 1_005);
+
+      const second = store.reservePost(approved.jobId, 'worker-b', 1_006);
+      if (second.kind !== 'admitted')
+        throw Error('expected second admission after verified absence');
+      store.settle(second, retry(5_000), 1_007);
+
+      const afterStaleRead = store.settleRead(
+        staleRead,
+        { kind: 'absent', httpStatus: 404, nextAttemptAt: null },
+        1_008,
+      );
+      assert.equal(afterStaleRead.nextAttemptAt, 5_000);
+      assert.deepEqual(store.reservePost(approved.jobId, 'worker-c', 1_009), {
+        kind: 'blocked',
+        reason: 'not_due',
+        nextAttemptAt: 5_000,
+      });
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test('an earlier overlapping read in one generation cannot shorten a newer read retry wait', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const admission = store.reservePost(approved.jobId, 'worker-a', 1_001);
+      if (admission.kind !== 'admitted') throw Error('expected admission');
+      store.settle(admission, retry(null), 1_002);
+
+      const earlier = store.reserveRead(approved.jobId, 1_003);
+      const later = store.reserveRead(approved.jobId, 1_004);
+      if (earlier.kind !== 'read_reserved' || later.kind !== 'read_reserved') {
+        throw Error('expected overlapping automatic reads');
+      }
+      store.settleRead(later, unknown(5_000), 1_005);
+      const afterEarlier = store.settleRead(
+        earlier,
+        { kind: 'absent', httpStatus: 404, nextAttemptAt: null },
+        1_006,
+      );
+      assert.equal(afterEarlier.nextAttemptAt, 5_000);
+      assert.deepEqual(store.reservePost(approved.jobId, 'worker-b', 1_007), {
+        kind: 'blocked',
+        reason: 'not_due',
+        nextAttemptAt: 5_000,
+      });
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test('an earlier overlapping read still extends a wait without replacing newer absence', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const admission = store.reservePost(approved.jobId, 'worker-a', 1_001);
+      if (admission.kind !== 'admitted') throw Error('expected admission');
+      store.settle(admission, retry(null), 1_002);
+      const earlier = store.reserveRead(approved.jobId, 1_003);
+      const later = store.reserveRead(approved.jobId, 1_004);
+      if (earlier.kind !== 'read_reserved' || later.kind !== 'read_reserved')
+        throw Error('expected reads');
+      store.settleRead(later, { kind: 'absent', httpStatus: 404, nextAttemptAt: null }, 1_005);
+      const result = store.settleRead(earlier, { ...unknown(5_000), httpStatus: 429 }, 1_006);
+      assert.equal(result.observed, 'absent');
+      assert.equal(result.nextAttemptAt, 5_000);
+      assert.deepEqual(store.reservePost(approved.jobId, 'worker-b', 1_007), {
+        kind: 'blocked',
+        reason: 'not_due',
+        nextAttemptAt: 5_000,
+      });
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test('a POST receipt is a durable claim until an exact automatic read verifies it', () => {
+  withStore((path) => {
+    let store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const admission = store.reservePost(approved.jobId, 'worker', 1_001);
+      if (admission.kind !== 'admitted') throw Error('expected admission');
+      const claim = present('claimed-vendor-order');
+      if (claim.kind !== 'present') throw Error('expected a receipt claim');
+      const claimed = store.settle(
+        admission,
+        {
+          classification: 'unknown',
+          httpStatus: 201,
+          nextAttemptAt: null,
+          claimedReceipt: claim.receipt,
+        },
+        1_002,
+      );
+      assert.equal(claimed.claimedReceipt?.vendorOrderId, 'claimed-vendor-order');
+      assert.equal(claimed.receipt, null);
+      assert.equal(claimed.observed, 'unknown');
+      assert.equal(claimed.outcome, 'unknown');
+      const postSettled = store.events(approved.jobId).at(-1);
+      assert.equal(postSettled?.kind, 'post_settled');
+      assert.equal(postSettled?.vendorOrderId, null);
+      store.close();
+
+      store = openRelayStore(path, 'resume');
+      assert.equal(
+        store.snapshot(approved.jobId).claimedReceipt?.vendorOrderId,
+        'claimed-vendor-order',
+      );
+      const read = store.reserveRead(approved.jobId, 1_003);
+      if (read.kind !== 'read_reserved') throw Error('expected automatic read');
+      const mismatch = store.settleRead(read, present('different-vendor-order'), 1_004);
+      assert.equal(mismatch.holdReason, 'integrity_failure');
+      assert.equal(mismatch.receipt, null);
+      assert.equal(mismatch.observed, 'unknown');
+      assert.equal(mismatch.outcome, 'unknown');
+      assert.equal(store.reservePost(approved.jobId, 'worker', 1_005).kind, 'blocked');
+      assert.equal(store.events(approved.jobId).at(-1)?.vendorOrderId, null);
+    } finally {
+      store.close();
+    }
+  });
+});
+
+test('POST and automatic GET request IDs are durably bound to their reservation and settlement audit events', () => {
+  withStore((path) => {
+    const store = openRelayStore(path, 'new');
+    try {
+      const pending = store.enqueue(order, 'fixture-store', 1_000);
+      const approved = store.approve(pending.jobId, pending.approvalRevision, 1_000);
+      const admission = store.reservePost(approved.jobId, 'worker', 1_001);
+      if (admission.kind !== 'admitted') throw Error('expected admission');
+      assert.match(admission.requestId, /^[A-Za-z0-9_-]{1,64}$/);
+      store.settle(admission, retry(null), 1_002);
+      const read = store.reserveRead(approved.jobId, 1_003);
+      if (read.kind !== 'read_reserved') throw Error('expected automatic read');
+      store.settleRead(read, unknown(), 1_004);
+      const events = store.events(approved.jobId);
+      assert.equal(
+        events.find((event) => event.kind === 'post_reserved')?.requestId,
+        admission.requestId,
+      );
+      assert.equal(
+        events.find((event) => event.kind === 'post_settled')?.requestId,
+        admission.requestId,
+      );
+      assert.equal(
+        events.find((event) => event.kind === 'read_reserved')?.requestId,
+        read.requestId,
+      );
+      assert.equal(
+        events.find((event) => event.kind === 'read_settled')?.requestId,
+        read.requestId,
+      );
+    } finally {
+      store.close();
+    }
+  });
+});
+
 test('audit insertion failure rolls back the enclosing state mutation', () => {
   withStore((path) => {
     const store = openRelayStore(path, 'new');
@@ -626,6 +815,7 @@ test('actual corrupt database bytes and unknown schema fail closed without overw
   const directory = mkdtempSync(join(tmpdir(), 'field-relay-state-'));
   const corrupt = join(directory, 'corrupt.sqlite');
   const unknown = join(directory, 'unknown.sqlite');
+  const legacy = join(directory, 'legacy.sqlite');
   try {
     const corruptBytes = Buffer.from([
       0x46, 0x69, 0x65, 0x6c, 0x64, 0x20, 0x52, 0x65, 0x6c, 0x61, 0x79, 0x00, 0xff,
@@ -645,6 +835,19 @@ test('actual corrupt database bytes and unknown schema fail closed without overw
       '99',
     );
     verify.close();
+
+    const current = openRelayStore(legacy, 'new');
+    current.close();
+    const legacyVersion = new DatabaseSync(legacy);
+    legacyVersion.prepare("UPDATE metadata SET value = '2' WHERE name = 'schemaVersion'").run();
+    legacyVersion.close();
+    assert.throws(() => openRelayStore(legacy, 'resume'), /unknown schema/i);
+    const verifyLegacy = new DatabaseSync(legacy);
+    assert.equal(
+      verifyLegacy.prepare("SELECT value FROM metadata WHERE name='schemaVersion'").get()?.value,
+      '2',
+    );
+    verifyLegacy.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

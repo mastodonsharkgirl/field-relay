@@ -36,6 +36,7 @@ export type JobSnapshot = {
   leaseExpiresAt: number | null;
   observed: ObservedState;
   outcome: Outcome;
+  claimedReceipt: VendorReceipt | null;
   receipt: VendorReceipt | null;
 };
 
@@ -43,6 +44,8 @@ export type Admission = {
   kind: 'admitted';
   jobId: string;
   leaseId: string;
+  requestId: string;
+  generation: number;
   order: Order;
   identity: OrderIdentity;
   attempt: number;
@@ -58,11 +61,17 @@ export type ReadReservation = {
   jobId: string;
   requestId: string;
   attempt: number;
+  generation: number;
   reservedAt: number;
 };
 
 export type ReadObservation = (
-  | { kind: 'present'; receipt: VendorReceipt; httpStatus: number | null; nextAttemptAt: number | null }
+  | {
+      kind: 'present';
+      receipt: VendorReceipt;
+      httpStatus: number | null;
+      nextAttemptAt: number | null;
+    }
   | { kind: 'absent'; httpStatus: number | null; nextAttemptAt: number | null }
   | {
       kind: 'unknown';
@@ -73,10 +82,10 @@ export type ReadObservation = (
 ) & { holdReason?: 'deferred_outside_deadline' };
 
 export type AttemptResult = {
-  classification: 'retryable' | 'permanent_failure' | 'delivered' | 'unknown';
+  classification: 'retryable' | 'permanent_failure' | 'unknown';
   httpStatus: number | null;
   nextAttemptAt: number | null;
-  receipt: VendorReceipt | null;
+  claimedReceipt: VendorReceipt | null;
   holdReason?: 'deferred_outside_deadline';
 };
 
@@ -104,6 +113,7 @@ export type AuditEvent = {
   reason: string | null;
   observed: ObservedState | null;
   vendorOrderId: string | null;
+  requestId: string | null;
 };
 
 /* eslint-disable no-unused-vars -- Interface names are API documentation. */
@@ -118,7 +128,12 @@ export interface RelayStore {
   settleRead(reservation: ReadReservation, result: ReadObservation, now: number): JobSnapshot;
   settle(admission: Admission, result: AttemptResult, now: number): JobSnapshot;
   hold(jobId: string, reason: HoldReason, now: number): JobSnapshot;
-  recordInspection(jobId: string, observation: ReadObservation, now: number): JobSnapshot;
+  recordInspection(
+    jobId: string,
+    observation: ReadObservation,
+    now: number,
+    requestId?: string | null,
+  ): JobSnapshot;
   close(): void;
 }
 /* eslint-enable no-unused-vars */
