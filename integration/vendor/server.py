@@ -21,7 +21,8 @@ SCENARIOS = {'healthy', '429_once', '429_twice', '429_repeat', '429_huge_retry_a
 SCENARIOS.update({'malformed_success_absent', 'wrong_content_type_success', 'malformed_429',
                   'malformed_401', 'malformed_403', 'malformed_422', 'malformed_500',
                   'claimed_receipt_mismatch'})
-READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'claimed_receipt_mismatch'}
+READBACK_ACTIONS = {'mismatched_readback', 'readback_unavailable', 'readback_blocked', 'claimed_receipt_mismatch', 'malformed_404', 'slow_404', 'invalid_404'}
+SCENARIOS.update(READBACK_ACTIONS)
 
 
 class DeadlineReader:
@@ -205,6 +206,10 @@ def create_server(store_path: Path, mode: str, token: str, admin_token: str) -> 
                 request_id = self._request_id()
                 if request_id is None: return
                 action, _ = store.consume_scenario(key, 'get', request_id)
+                if action == 'malformed_404': self._malformed_response(action); return
+                if action == 'invalid_404': self._json(404, {'schemaVersion': 1}); return
+                if action == 'slow_404':
+                    self._slow_json(404, {'schemaVersion': 1, 'code': 'not_found', 'requestId': request_id, 'message': 'Synthetic vendor request rejected.'}); return
                 if action == 'readback_unavailable': self._error(503, 'synthetic_readback_unavailable'); return
                 if action == 'readback_blocked': self._error(423, 'synthetic_readback_blocked'); return
                 receipt = store.get_order(key)

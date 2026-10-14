@@ -13,6 +13,33 @@ import { withVendor, type VendorProcess } from './helpers/vendor-process.ts';
 
 const schedulerToleranceMs = 150;
 
+for (const fault of ['malformed_404', 'slow_404', 'invalid_404']) {
+  test('invalid absence evidence cannot authorize a second POST: ' + fault, async () => {
+    await withVendor(async (vendor) => {
+      const order = orderFor('INVALID-ABSENCE-' + fault);
+      const key = identify(order).idempotencyKey;
+      await vendor.configure(key, ['503_once', fault]);
+      await withApprovedJob(vendor, order, async (store, jobId) => {
+        const result = await dispatch(store, jobId, vendor.connection, 'absence-worker');
+        assert.equal(result.postReservations, 1);
+        assert.equal(result.holdReason, 'integrity_failure');
+        assert.equal(result.observed, 'unknown');
+        assert.equal(
+          store.events(jobId).findLast((event) => event.kind === 'read_settled')?.httpStatus,
+          404,
+        );
+        await vendor.configure(key, [fault]);
+        const inspected = await inspectOrder(store, jobId, vendor.connection);
+        assert.equal(inspected.observed, 'unknown');
+        assert.equal(
+          store.events(jobId).findLast((event) => event.kind === 'operator_inspection')?.observed,
+          'unknown',
+        );
+      });
+    });
+  });
+}
+
 const orderFor = (orderId: string): Order => ({
   schemaVersion: 1,
   partner: 'northstar',
