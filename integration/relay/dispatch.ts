@@ -51,7 +51,7 @@ const metadataFor = (result: HttpResult): ResponseMetadata => {
 const isAmbiguousSuccess = (status: number | null) =>
   status !== null && status >= 200 && status < 300;
 
-const isVerifiedAbsence = (result: HttpResult) => {
+const isVerifiedAbsence = (result: HttpResult, expectedRequestId: string) => {
   if (result.kind !== 'response' || result.status !== 404) return false;
   const body = result.body;
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return false;
@@ -61,8 +61,7 @@ const isVerifiedAbsence = (result: HttpResult) => {
     value.schemaVersion === 1 &&
     value.code === 'not_found' &&
     value.message === 'Synthetic vendor request rejected.' &&
-    typeof value.requestId === 'string' &&
-    /^[A-Za-z0-9_-]{1,64}$/.test(value.requestId)
+    value.requestId === expectedRequestId
   );
 };
 
@@ -187,7 +186,7 @@ const readVendor = async (
       snapshot: readbackIntegrity(store, jobId, reservation, metadata.status, now),
     };
   }
-  if (isVerifiedAbsence(result)) {
+  if (isVerifiedAbsence(result, reservation.requestId)) {
     const settled = store.settleRead(
       reservation,
       { kind: 'absent', httpStatus: metadata.status, nextAttemptAt: null },
@@ -402,7 +401,7 @@ export const inspectOrder = async (
     );
     return store.hold(jobId, 'integrity_failure', observedAt);
   }
-  if (isVerifiedAbsence(result)) {
+  if (isVerifiedAbsence(result, requestId)) {
     return store.recordInspection(
       jobId,
       { kind: 'absent', httpStatus: metadata.status, nextAttemptAt: null },

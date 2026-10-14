@@ -13,7 +13,7 @@ import { withVendor, type VendorProcess } from './helpers/vendor-process.ts';
 
 const schedulerToleranceMs = 150;
 
-for (const fault of ['malformed_404', 'slow_404', 'invalid_404']) {
+for (const fault of ['malformed_404', 'slow_404', 'invalid_404', 'mismatched_404']) {
   test('invalid absence evidence cannot authorize a second POST: ' + fault, async () => {
     await withVendor(async (vendor) => {
       const order = orderFor('INVALID-ABSENCE-' + fault);
