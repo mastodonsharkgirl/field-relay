@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "project": "Field Relay",
+  "checkedAt": "2026-10-14T19:15:22.0574714Z",
+  "sourceSha": "478a2079ca14be39583de3b684827b6a6e19b570",
+  "computeSlot": "Explicit admission after Compass release and project 10 preflight stop",
+  "released": true,
+  "remainingOwnedProcessCandidates": [],
+  "remainingKnownQaPids": [],
+  "qaPort4796Closed": true,
+  "browserEvidence": "Playwright runner completed 20 tests and exited zero; managed server and known worker PIDs ended",
+  "availableRamGiB": 3.72,
+  "modelInferenceRun": false,
+  "tests": {
+    "nodePassed": 90,
+    "pythonPassed": 27,
+    "applicationUnitPassed": 15,
+    "browserPassed": 20,
+    "failures": 0,
+    "skipped": 0
+  },
+  "gates": [
+    "integration:check passed",
+    "integration:test passed",
+    "qa passed",
+    "clean scripted demo passed",
+    "clean resume passed",
+    "compiled marker scan 10 files zero matches"
+  ],
+  "remainingWork": [
+    "Scoped re-review",
+    "Independent whole-branch review",
+    "Documentation/evidence commit"
+  ],
+  "limitations": [
+    "No push or deployment",
+    "No fresh manual visual audit",
+    "Dated unresolved dependency advisory documented in RELEASE.md"
+  ],
+  "resourceActions": "No unrelated process stopped; no model unloaded by this task; all owned lab stop calls verify child closure and port refusal"
+}

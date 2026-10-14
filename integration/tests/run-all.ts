@@ -12,18 +12,25 @@ const files = readdirSync(join(projectRoot, 'integration/tests'))
   .map((name) => join(projectRoot, 'integration/tests', name));
 if (!files.length) throw Error('No integration tests discovered.');
 const startedAt = new Date().toISOString();
+const nodeArgs = ['--test', '--test-concurrency=1', ...files];
+const pythonArgs = [
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'integration/tests',
+  '-p',
+  'test_*.py',
+  '-v',
+];
+const pythonExecutable = await resolvePython();
 const nodeStarted = Date.now();
-const node = await ownedProcess(process.execPath, ['--test', '--test-concurrency=1', ...files], env)
-  .result;
+const node = await ownedProcess(process.execPath, nodeArgs, env).result;
 const nodeElapsedMs = Date.now() - nodeStarted;
 writeFileSync(join(directory, 'node.log'), node.stdout + node.stderr);
 process.stdout.write(node.stdout + node.stderr);
 const pythonStarted = Date.now();
-const python = await ownedProcess(
-  await resolvePython(),
-  ['-m', 'unittest', 'discover', '-s', 'integration/tests', '-p', 'test_*.py', '-v'],
-  env,
-).result;
+const python = await ownedProcess(pythonExecutable, pythonArgs, env).result;
 const pythonElapsedMs = Date.now() - pythonStarted;
 writeFileSync(join(directory, 'python.log'), python.stdout + python.stderr);
 process.stdout.write(python.stdout + python.stderr);
@@ -32,8 +39,8 @@ const summary = {
   startedAt,
   finishedAt: new Date().toISOString(),
   commands: [
-    'node --test --test-concurrency=1 integration/tests/*.test.ts',
-    'python -m unittest discover -s integration/tests -p test_*.py -v',
+    { executable: process.execPath, args: nodeArgs },
+    { executable: pythonExecutable, args: pythonArgs },
   ],
   node: {
     elapsedMs: nodeElapsedMs,

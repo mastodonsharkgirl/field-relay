@@ -7,6 +7,37 @@ import { identify } from '../relay/contract.ts';
 import { waitUntil, controlRequest } from '../runtime.ts';
 import { readVendorList } from '../relay/evidence.ts';
 
+test('scripted resume retains mixed operator and harness approval history', async () => {
+  const lab = await startLab({ mode: 'new' });
+  try {
+    const fixture = await lab.command(['fixture', 'northstar']);
+    assert.equal(fixture.code, 0);
+    const [job] = JSON.parse(fixture.stdout);
+    assert.equal((await lab.command(['approve', job.jobId, '0', 'operator'])).code, 0);
+    assert.equal((await lab.command(['approve', job.jobId, '1', 'harness'])).code, 0);
+    assert.equal((await lab.command(['dispatch', job.jobId])).code, 0);
+  } finally {
+    await lab.stop();
+  }
+  const { launchExercise } = await import('../launch.ts');
+  const { renderEvidence } = await import('../relay/evidence.ts');
+  const evidence = await launchExercise({
+    mode: 'resume',
+    runId: lab.runId,
+    scenario: 'response-loss',
+    scripted: true,
+  });
+  assert.equal(evidence.status, 'passed');
+  assert.deepEqual(
+    evidence.events.filter((event) => event.kind === 'approved').map((event) => event.reason),
+    ['operator', 'harness'],
+  );
+  const markdown = renderEvidence(evidence).markdown;
+  assert.match(markdown, /revision 1, operator/);
+  assert.match(markdown, /revision 2, harness/);
+  assert.match(markdown, /Launcher mode: scripted/);
+});
+
 for (const stopAt of ['before-admission', 'admission'] as const) {
   test('changed content at ' + stopAt + ' preserves the exact admitted HTTP body', async () => {
     const lab = await startLab({ mode: 'new' });

@@ -14,6 +14,6 @@ The main browser product answers a related earlier question: what changed betwee
 | Limit recovery attempts                   | A failure should become an explicit exception instead of an endless loop. |
 | Separate revocation from observed outcome | Stopping future sends cannot undo an already admitted request.            |
 
-This is an AI-assisted local prototype with fictional fixtures and injected failures. Focused checks have demonstrated specific local outcomes; final whole-system acceptance remains pending. No customer has adopted it, no savings are measured, and no Claude or cloud integration is deployed.
+This is an AI-assisted local prototype with fictional fixtures and injected failures. The aggregate integration tests, website build and browser regressions have passed, and a clean scripted walkthrough and resume verified the same two supplier orders. See the [release record](RELEASE.md) for source, review status and limits. No customer has adopted it, no savings are measured, and no Claude or cloud integration is deployed.
 
 Before a real pilot, confirm the supplier's duplicate-key retention and readback semantics, approval ownership, correction/cancellation process and exception owner. Then add production identity, secret management, HTTPS, hosting, durable queueing, tenant isolation, backups, monitoring and vendor-specific failure tests. Agree acceptance criteria with the customer instead of borrowing the lab's limits as production requirements.

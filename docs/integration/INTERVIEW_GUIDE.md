@@ -1,6 +1,6 @@
 # Explain Field Relay in an interview
 
-This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. The HTTP lab is still undergoing launcher and whole-system acceptance work; use the release record for current verification status.
+This guide describes an AI-assisted portfolio prototype. The supply-chain story below is fictional. It is a way to explain the problem, not a claim about a real friend, employer, customer interview or deployment. Local integration, build and browser checks have passed; use the [release record](RELEASE.md) for current review status and the [saved walkthrough](../evidence/2026-10-15-mock-http/walkthrough.md) for measured outcomes.
 
 ## Start with the problem
 
@@ -14,6 +14,22 @@ Field Relay explores these two problems in separate local workflows:
 - The **synthetic HTTP lab** uses fictional fixture orders, a relay and a separate mock supplier service. It tests approval, uncertain delivery and recovery across process restarts. Browser uploads and browser approvals never enter this lab.
 
 They share a business context. They are not a connected live order-management product.
+
+```mermaid
+sequenceDiagram
+    participant Person as Operator
+    participant Relay as Field Relay
+    participant Supplier as Mock supplier
+    Person->>Relay: Approve this exact order
+    Relay->>Supplier: Send order with its stable reference
+    Note over Supplier: Order saved
+    Supplier--xRelay: Reply is lost
+    Relay->>Supplier: What did you save for this reference?
+    Supplier-->>Relay: Saved order and receipt
+    Relay-->>Person: Exact order verified
+```
+
+The important distinction is between **the reply arriving** and **the order being saved**. They are different facts. The project tests how to recover when only the second one happened.
 
 ## A 60-second answer
 

@@ -16,6 +16,9 @@ test('final unverified supplier evidence cannot produce a passing run', () => {
       'utf8',
     ),
   );
+  for (const row of input.scenarioResults)
+    row.checks = [{ name: 'fixture baseline', expected: true, observed: true, mode: 'equal' }];
+  assert.equal(buildEvidence(input).status, 'passed');
   input.vendorReadback = {
     ...input.vendorReadback,
     verification: 'unavailable',
@@ -45,6 +48,25 @@ test('scenario measurements override a stale pass label and appear in the human 
   const markdown = renderEvidence(evidence).markdown;
   assert.match(markdown, /wire POST delta/);
   assert.match(markdown, /failed/);
+});
+
+test('human evidence uses persisted approval events even when launcher mode differs', async () => {
+  const { renderEvidence } = await import('../relay/evidence.ts');
+  const input = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../docs/evidence/2026-10-15-mock-http-checkpoint/focused-walkthrough.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  input.events.find((event: { kind: string }) => event.kind === 'approved').reason = 'operator';
+  input.metadata.scripted = true;
+  const markdown = renderEvidence(buildEvidence(input)).markdown;
+  assert.match(markdown, /Launcher mode: scripted/);
+  assert.match(markdown, /Persisted approvals:[\s\S]*operator/);
+  assert.doesNotMatch(markdown, /Approval source: scripted harness/);
 });
 
 test('overlapping cleanup calls both wait for the owned processes to close', async () => {
@@ -185,6 +207,29 @@ test('walkthrough holds changed payload, stops after 429 revocation and reports 
   assert.equal(evidence.metadata.credentialScanPassed, true);
   assert.equal(evidence.metadata.cleanupVerified, true);
   assert.equal(evidence.status, 'passed');
+  assert.match(evidence.metadata.commands[0], /^launchExercise\(/);
+  const timeoutUpper = evidence.scenarioResults[0].checks?.find(
+    (check) =>
+      check.name === 'POST timeout upper bound ms (750 ms plus 150 ms scheduler tolerance)',
+  );
+  assert.equal(timeoutUpper?.expected, 900);
+  assert.equal(timeoutUpper?.mode, 'at-most');
+  assert.equal(
+    buildEvidence({
+      ...evidence,
+      scenarioResults: evidence.scenarioResults.map((row, index) =>
+        index === 0
+          ? {
+              ...row,
+              checks: row.checks?.map((check) =>
+                check === timeoutUpper ? { ...check, observed: 9000 } : check,
+              ),
+            }
+          : row,
+      ),
+    }).status,
+    'failed',
+  );
   const projected = buildEvidence({
     ...evidence,
     metadata: { ...evidence.metadata, unexpectedSecret: 'drop-me' },

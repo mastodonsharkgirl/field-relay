@@ -1,0 +1,98 @@
+
+> field-relay@1.0.0 qa
+> npm run check && npm run lint && npm run format:check && npm test && npm run build && npm run test:e2e
+
+
+> field-relay@1.0.0 check
+> astro check
+
+00:41:06 [types] Generated 175ms
+00:41:06 [check] Getting diagnostics for Astro files in C:\Users\Kanak\Documents\Saran Websites\repos\field-relay\.worktrees\mock-http...
+Result (15 files): 
+- 0 errors
+- 0 warnings
+- 0 hints
+
+
+> field-relay@1.0.0 lint
+> eslint "src/**/*.{ts,tsx}" "tests/**/*.ts" "integration/**/*.ts"
+
+
+> field-relay@1.0.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> field-relay@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.11 C:/Users/Kanak/Documents/Saran Websites/repos/field-relay/.worktrees/mock-http
+
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  00:41:18
+   Duration  414ms (transform 44ms, setup 0ms, import 73ms, tests 24ms, environment 0ms)
+
+
+> field-relay@1.0.0 build
+> astro build
+
+00:41:20 [types] Generated 53ms
+00:41:20 [build] output: "static"
+00:41:20 [build] mode: "static"
+00:41:20 [build] directory: C:\Users\Kanak\Documents\Saran Websites\repos\field-relay\.worktrees\mock-http\dist\
+00:41:20 [build] Collecting build info...
+00:41:20 [build] ✓ Completed in 99ms.
+00:41:20 [build] Building static entrypoints...
+00:41:20 [WARN] [vite] 
+/labs/field-relay/fonts/geist-latin.woff2 referenced in /labs/field-relay/fonts/geist-latin.woff2 didn't resolve at build time, it will remain unchanged to be resolved at runtime
+00:41:20 [vite] ✓ built in 240ms
+00:41:21 [vite] ✓ built in 89ms
+00:41:21 [build] Rearranging server assets...
+
+ generating static routes 
+00:41:21   ├─ /case-study/index.html (+11ms) 
+00:41:21   ├─ /index.html (+23ms) 
+00:41:21 ✓ Completed in 62ms.
+
+00:41:21 [build] ✓ Completed in 433ms.
+00:41:21 [build] 2 page(s) built in 534ms
+00:41:21 [build] Complete!
+
+> field-relay@1.0.0 test:e2e
+> playwright test
+
+[WebServer] (node:75200) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:81808) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 20 tests using 1 worker
+
+(node:85284) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 tests\workbench.spec.ts:7:1 › validates, recovers from an outage, replays safely and exports evidence (2.2s)
+  ok  2 tests\workbench.spec.ts:35:1 › renders malformed input as a local error and reset clears it (1.4s)
+  ok  3 tests\workbench.spec.ts:48:1 › filters a queue, inspects held source, and invalidates approval after a changed draft (823ms)
+  ok  4 tests\workbench.spec.ts:72:1 › marks mapping edits as invalid or changed and blocks delivery until explicit revalidation (618ms)
+  ok  5 tests\workbench.spec.ts:92:1 › keeps a successful delivery replay-safe through unchanged validation and an edit reverted to the same CSV (785ms)
+  ok  6 tests\workbench.spec.ts:118:1 › clears manual approval when a draft changes without clearing its delivery session (654ms)
+  ok  7 tests\workbench.spec.ts:137:1 › holds a changed payload after a successful local delivery (646ms)
+  ok  8 tests\workbench.spec.ts:154:1 › holds a changed payload after a failed local delivery (650ms)
+  ok  9 tests\workbench.spec.ts:174:1 › keeps 320px enlarged text in bounds and presents only the static fallback without JavaScript (433ms)
+  ok 10 tests\workbench.spec.ts:197:1 › puts a readable findings row in the opening viewport on desktop and phone (622ms)
+  ok 11 tests\workbench.spec.ts:218:1 › keeps mapped setup and results in bounds at enlarged text and gives phone filters usable targets (1.4s)
+  ok 12 tests\workbench.spec.ts:257:1 › keeps crafted collision findings, browser decisions, and downloaded reports independent (857ms)
+  ok 13 tests\workbench.spec.ts:294:1 › blocks stale simulator evidence export and focuses stacked detail at tablet width (733ms)
+  ok 14 tests\workbench.spec.ts:321:1 › reconciles two exports, records a revision-bound review, and exports local evidence (615ms)
+  ok 15 tests\workbench.spec.ts:345:1 › requires an explicit choice before exporting an unsaved review and disables impossible candidate acceptance (723ms)
+  ok 16 tests\workbench.spec.ts:374:1 › blocks a malformed replacement instead of retaining an old clean comparison (375ms)
+  ok 17 tests\workbench.spec.ts:386:1 › keeps reconciliation and delivery-lab sessions intact when switching modes (611ms)
+  ok 18 tests\workbench.spec.ts:404:1 › keeps focus while typing an explicit comparison label (424ms)
+  ok 19 tests\workbench.spec.ts:415:1 › saves a duplicate-ID hold as reviewed but keeps it unresolved (445ms)
+  ok 20 tests\workbench.spec.ts:427:1 › labels fictional versus local inputs and opens mobile finding detail with labeled source cells (439ms)
+
+  20 passed (22.1s)

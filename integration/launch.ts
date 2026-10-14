@@ -274,12 +274,20 @@ export const launchExercise = async (options: {
           postLifetime: 1,
           extras: [
             {
-              name: 'POST timeout elapsed ms (750 ms limit, 100 ms scheduler tolerance)',
-              expected: 650,
+              name: 'POST timeout lower bound ms (750 ms minus 150 ms scheduler tolerance)',
+              expected: 600,
               observed:
                 store.events(loss.jobId).find((event) => event.kind === 'post_settled')!.at -
                 store.events(loss.jobId).find((event) => event.kind === 'post_reserved')!.at,
               mode: 'at-least',
+            },
+            {
+              name: 'POST timeout upper bound ms (750 ms plus 150 ms scheduler tolerance)',
+              expected: 900,
+              observed:
+                store.events(loss.jobId).find((event) => event.kind === 'post_settled')!.at -
+                store.events(loss.jobId).find((event) => event.kind === 'post_reserved')!.at,
+              mode: 'at-most',
             },
           ],
         },
@@ -466,11 +474,16 @@ export const launchExercise = async (options: {
         sourceSha: sha.stdout.trim(),
         dirty: dirty.stdout.trim().length > 0,
         commands: [
-          'npm run integration:demo -- ' +
-            (options.scripted ? '--scripted ' : '') +
-            (options.mode === 'resume' ? '--resume ' + lab.runId + ' ' : '') +
-            '--scenario ' +
-            options.scenario,
+          process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
+            ? ['node', 'integration/launch.ts', ...process.argv.slice(2)].join(' ')
+            : 'launchExercise(' +
+              JSON.stringify({
+                mode: options.mode,
+                runId: options.runId,
+                scenario: options.scenario,
+                scripted: options.scripted,
+              }) +
+              ')',
         ],
         nodeVersion: process.versions.node,
         pythonVersion,

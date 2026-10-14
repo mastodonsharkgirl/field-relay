@@ -1,0 +1,25 @@
+{
+  "startedAt": "2026-10-14T19:09:00.834Z",
+  "finishedAt": "2026-10-14T19:10:31.617Z",
+  "commands": [
+    "node --test --test-concurrency=1 integration/tests/*.test.ts",
+    "python -m unittest discover -s integration/tests -p test_*.py -v"
+  ],
+  "node": {
+    "elapsedMs": 66491,
+    "exit": 0,
+    "tests": 90,
+    "passed": 90,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "python": {
+    "elapsedMs": 24287,
+    "exit": 0,
+    "tests": 27,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

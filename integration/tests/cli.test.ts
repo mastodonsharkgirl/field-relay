@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openRelayStore } from '../relay/state.ts';
 import { loadFixture } from '../relay/intake.ts';
-import { ownedProcess, projectRoot, buildChildEnv } from '../runtime.ts';
+import { ownedProcess, projectRoot, buildChildEnv, runDirectory } from '../runtime.ts';
 import { setTimeout, clearTimeout } from 'node:timers';
 
 test('SIGINT cleanup handler closes owned PIDs and preserves resumable state', async () => {
@@ -55,6 +55,15 @@ test('PowerShell wrapper resolves the checkout from a working directory with spa
   assert.equal(result.code, 0, result.stderr);
   assert.match(result.stdout, /passed: response-loss/);
   assert.match(result.stdout, /Synthetic local exercise: run-/);
+  const runId = /Synthetic local exercise: (run-[a-f0-9-]+)/.exec(result.stdout)![1];
+  const reports = join(runDirectory(runId), 'reports');
+  const report = readdirSync(reports).filter(
+    (file) => file.endsWith('.json') && !file.startsWith('scan-'),
+  )[0];
+  const evidence = JSON.parse(readFileSync(join(reports, report), 'utf8'));
+  assert.deepEqual(evidence.metadata.commands, [
+    'node integration/launch.ts --scripted --scenario response-loss',
+  ]);
 });
 
 test('approval source is persisted per event across a store restart', () => {

@@ -318,6 +318,17 @@ export const buildEvidence = (
 };
 
 export const renderEvidence = (evidence: RunEvidence) => {
+  const approvals = evidence.jobs
+    .map((job) => {
+      const history = evidence.events
+        .filter((event) => event.jobId === job.jobId && event.kind === 'approved')
+        .map(
+          (event) =>
+            `sequence ${event.sequence}, revision ${event.approvalRevision}, ${event.reason === 'operator' || event.reason === 'harness' ? event.reason : 'source unrecorded'}`,
+        );
+      return `- ${job.jobId}: ${history.join('; ') || 'no approval recorded'}`;
+    })
+    .join('\n');
   const rows = evidence.scenarioResults
     .map(
       (result) =>
@@ -338,7 +349,7 @@ export const renderEvidence = (evidence: RunEvidence) => {
     .join(', ');
   return {
     json: JSON.stringify(evidence, null, 2) + '\n',
-    markdown: `# Synthetic local run ${evidence.metadata.runId}\n\nOverall result: ${evidence.status}. Scenarios ${totals}. Final supplier verification: ${evidence.vendorReadback.verification}; count: ${evidence.vendorReadback.count ?? 'unknown'}.\n\nSource: ${evidence.metadata.sourceSha}; dirty: ${evidence.metadata.dirty}.\n\nApproval source: ${evidence.metadata.scripted ? 'scripted harness' : 'local operator'}. No real vendor or model called.\n\n| Scenario | Result | Expected orders | Verified orders | Exact payload | Reserved POSTs | Automatic GETs | Scenario ms |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |\n${rows}\n\nVendor inspection requests: ${evidence.vendorReadback.inspectionRequests}. Total local workflow: ${evidence.metadata.elapsedMs} ms, including injected delays. Not a production performance benchmark.\n${details}`,
+    markdown: `# Synthetic local run ${evidence.metadata.runId}\n\nOverall result: ${evidence.status}. Scenarios ${totals}. Final supplier verification: ${evidence.vendorReadback.verification}; count: ${evidence.vendorReadback.count ?? 'unknown'}.\n\nSource: ${evidence.metadata.sourceSha}; dirty: ${evidence.metadata.dirty}.\n\nLauncher mode: ${evidence.metadata.scripted ? 'scripted' : 'interactive'}. No real vendor or model called.\n\nPersisted approvals: each source below comes from its saved approval event, independent of the current launcher mode.\n\n${approvals}\n\n| Scenario | Result | Expected orders | Verified orders | Exact payload | Reserved POSTs | Automatic GETs | Scenario ms |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |\n${rows}\n\nVendor inspection requests: ${evidence.vendorReadback.inspectionRequests}. Total local workflow: ${evidence.metadata.elapsedMs} ms, including injected delays. Not a production performance benchmark.\n${details}`,
   };
 };
 

@@ -1,6 +1,6 @@
 # Run and explain the local exercise
 
-Status: launcher development checkpoint, 15 October 2026. Focused launcher, restart and failure tests have passed. Full aggregate and application acceptance remain pending. This page explains the implemented workflow; consult the saved report for the result of any particular run.
+Status: local verification passed on 15 October 2026; independent final review is recorded in [RELEASE.md](RELEASE.md). The clean committed walkthrough and resume reports are in [the evidence folder](../evidence/2026-10-15-mock-http/README.md). This page explains the implemented workflow; consult the saved report for the result of any particular run.
 
 ## Start
 
@@ -36,7 +36,7 @@ It does not install dependencies or change execution policy. Node's experimental
 2. Approve that exact revision. In scripted mode, identify the approval as a harness action.
 3. The mock supplier commits the order and withholds the POST response. The launcher observes the committed state while the response is held.
 4. The relay times out, preserves uncertainty and performs authenticated readback. A POST response alone cannot establish delivery.
-5. Inspect the full saved receipt and exact fields. The full walkthrough restarts the supplier and uses a new relay process; replay preserves the same order and attempt budget. Final evidence comes through HTTP, never by reading the supplier database.
+5. Inspect the full saved receipt and exact fields. The full walkthrough restarts the supplier and uses a new relay process. Repeating dispatch of the already verified job creates zero additional POSTs and zero supplier replay acknowledgments. A separate late-commit test exercises a real supplier replay. Final evidence comes through HTTP, never by reading the supplier database.
 6. The walkthrough attempts a fixed changed-amount proposal under the same order ID. It records a content conflict and retains the original approved payload and saved order.
 7. A separate Orbit order receives 429. The launcher waits for the persisted retry schedule, revokes approval during the wait, and verifies that no second POST was reserved and no order was saved for that key.
 8. Another Orbit order is held after admission but before commit. Approval is revoked and the supplier is released. The already admitted request may commit; the report records the actual saved result. Explain why this is not a promise of cancellation.
@@ -62,5 +62,7 @@ The managed CLI also accepts `fixture northstar`, `fixture orbit`, `approve JOB_
 - `approvalState: revoked` can coexist with `observed: present` after an admitted request commits.
 - `count: null` means the report could not verify the listing. It does not mean zero orders.
 - `dirty: true` means the run used uncommitted changes alongside the recorded base SHA. Keep that qualification with copied results.
+- Every scenario includes expected-versus-observed checks, its own elapsed time, the related audit sequence numbers, and final relay state. Wire GET deltas account separately for automatic verification, operator inspection and evidence inspection.
+- A successful scenario cannot override unavailable or mismatched final readback. Overall success also requires exact receipts, completed cleanup and credential scans of the owned artifacts and both report formats.
 
 The launcher stops only owned children on normal exit and its SIGINT handler. The focused handler test injects a SIGINT event; it is not a manual physical-keyboard Ctrl+C certification. State and reports are preserved. A partial startup directory is not silently repaired; start a new named run or investigate preserved state. No reset or recursive deletion command is included.
