@@ -1,0 +1,197 @@
+{
+  "checkedAt": "2026-10-15T10:28:19.322Z",
+  "base": "https://field-relay-saran.pages.dev/labs/field-relay/",
+  "viewportEmulationOnly": true,
+  "results": [
+    {
+      "name": "desk-320",
+      "width": 320,
+      "scrollWidth": 320,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "desk-reading-320",
+      "firstFinding": {
+        "x": 13,
+        "y": 791.96875,
+        "width": 294,
+        "height": 105.515625
+      },
+      "headline": {
+        "fontSize": "30.4px",
+        "fontFamily": "Geist, system-ui, sans-serif"
+      },
+      "primaryAction": {
+        "x": 12,
+        "y": 221.515625,
+        "width": 105.859375,
+        "height": 42
+      }
+    },
+    {
+      "name": "desk-390",
+      "width": 390,
+      "scrollWidth": 390,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "desk-reading-390",
+      "firstFinding": {
+        "x": 17,
+        "y": 693.640625,
+        "width": 356,
+        "height": 105.515625
+      },
+      "headline": {
+        "fontSize": "30.4px",
+        "fontFamily": "Geist, system-ui, sans-serif"
+      },
+      "primaryAction": {
+        "x": 16,
+        "y": 230.515625,
+        "width": 111.96875,
+        "height": 42
+      }
+    },
+    {
+      "name": "desk-768",
+      "width": 768,
+      "scrollWidth": 768,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "desk-reading-768",
+      "firstFinding": {
+        "x": 25,
+        "y": 710.375,
+        "width": 718,
+        "height": 72.890625
+      },
+      "headline": {
+        "fontSize": "42.4px",
+        "fontFamily": "Geist, system-ui, sans-serif"
+      },
+      "primaryAction": {
+        "x": 24,
+        "y": 271.78125,
+        "width": 132.1875,
+        "height": 40
+      }
+    },
+    {
+      "name": "desk-1440",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "desk-reading-1440",
+      "firstFinding": {
+        "x": 44.1875,
+        "y": 591.234375,
+        "width": 817.25,
+        "height": 72.890625
+      },
+      "headline": {
+        "fontSize": "51.84px",
+        "fontFamily": "Geist, system-ui, sans-serif"
+      },
+      "primaryAction": {
+        "x": 43.1875,
+        "y": 213.796875,
+        "width": 132.1875,
+        "height": 40
+      }
+    },
+    {
+      "name": "desk-1920",
+      "width": 1920,
+      "scrollWidth": 1920,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "desk-reading-1920",
+      "firstFinding": {
+        "x": 218.59375,
+        "y": 635.9375,
+        "width": 896.578125,
+        "height": 72.890625
+      },
+      "headline": {
+        "fontSize": "54.4px",
+        "fontFamily": "Geist, system-ui, sans-serif"
+      },
+      "primaryAction": {
+        "x": 217.59375,
+        "y": 240.5,
+        "width": 132.1875,
+        "height": 40
+      }
+    },
+    {
+      "name": "setup-1440",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "setup-320-enlarged",
+      "width": 320,
+      "scrollWidth": 320,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "detail-320",
+      "width": 320,
+      "scrollWidth": 320,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "lab-320",
+      "width": 320,
+      "scrollWidth": 320,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "lab-1440",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "walkthrough-320",
+      "width": 320,
+      "scrollWidth": 320,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "walkthrough-768",
+      "width": 768,
+      "scrollWidth": 768,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "walkthrough-1440",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "case-study-320",
+      "width": 320,
+      "scrollWidth": 320,
+      "font": "Geist, system-ui, sans-serif"
+    },
+    {
+      "name": "case-study-1440",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Geist, system-ui, sans-serif"
+    }
+  ],
+  "pageErrors": [],
+  "requestOrigins": ["https://field-relay-saran.pages.dev"],
+  "reducedMotionRunningAnimations": 0,
+  "reviewAndFocusRestoration": true,
+  "mobileDetailAndFocusRestoration": true
+}

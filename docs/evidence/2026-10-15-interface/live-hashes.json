@@ -1,0 +1,78 @@
+{
+  "sourceSha": "abc15248a1972b53699832e42f0bf3178ceacff6",
+  "checkedAt": "2026-10-15T10:25:37.253Z",
+  "files": [
+    {
+      "path": "labs/field-relay/_astro/Brand.DygZYX0T.css",
+      "status": 200,
+      "sha256": "7b40e2c995233468d3670bbfda8353fda9e3d2fd553c2a7631be7f5d1b7e543a",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/_astro/Workbench.u2YRk8er.js",
+      "status": 200,
+      "sha256": "b7636ce522f01b82337474ea9d5821e44eaf1294f9295ea26bd277e5d715fcc5",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/_astro/client.CLhIxG29.js",
+      "status": 200,
+      "sha256": "4698c577644dd82e07506c5a67216e21b73de9e14974388ab099053a7dcaec7f",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/_astro/react.DJY1zw8Z.js",
+      "status": 200,
+      "sha256": "702812fc9378c73101b63526d0318d087e3d267ac7d54d67bd9c269dd1fcdbb6",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/case-study/index.html",
+      "status": 200,
+      "sha256": "751cc944625416fe1ab8ce6a97654d7de62a07c85ea010b21c301b2670c67ce8",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/favicon.svg",
+      "status": 200,
+      "sha256": "ff67a0b9581613a7528d4de2a69a918096fc82f22c105c971bc7c62ec28e2ece",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/fixtures/northstar.csv",
+      "status": 200,
+      "sha256": "dc08082ce30f048e4ce10f9f53b42abbc3f42d38a5ebadb851cec7bce8a11151",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/fixtures/orbit.csv",
+      "status": 200,
+      "sha256": "6f1ce7ae94f3a8647420d8fac8c28baddb43a1e8a99aef79b54f95377895ab71",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/fonts/GEIST-LICENSE.txt",
+      "status": 200,
+      "sha256": "71609cbb5c78b5870d712eab73a31d76622635c6ed034ab5cee3b9ecbda8685f",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/fonts/geist-latin.woff2",
+      "status": 200,
+      "sha256": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/index.html",
+      "status": 200,
+      "sha256": "94acfe34ae4419de24cba6b045adc2c506608e23ce94264157352c38c3945769",
+      "noindex": "noindex"
+    },
+    {
+      "path": "labs/field-relay/walkthrough/index.html",
+      "status": 200,
+      "sha256": "3fc07edb189471d3c12d6b3daede70d793c25fc1054b457ae852892f465b6a7b",
+      "noindex": "noindex"
+    }
+  ]
+}
