@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Brand from '../components/Brand';
 import record from '../../docs/evidence/2026-10-15-mock-http/audited/walkthrough.json';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const labels: Record<string, string> = {
@@ -21,6 +22,7 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
     <meta name="viewport" content="width=device-width" />
     <meta name="robots" content="noindex" />
     <title>Field Relay — interview walkthrough</title>
+    <link rel="icon" href={base + 'favicon.svg'} type="image/svg+xml" />
     <meta
       name="description"
       content="A five-minute walkthrough of CSV reconciliation and a recorded local experiment in uncertain order delivery."
@@ -29,7 +31,7 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
   <body>
     <main class="tour">
       <header class="masthead">
-        <a class="wordmark" href={base}><span>F</span>IELD RELAY</a>
+        <Brand href={base} />
         <nav aria-label="Walkthrough navigation">
           <a href={base + 'case-study/'}>Case study</a>
           <a href={source}>Source</a>
@@ -59,8 +61,8 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
         <ol>
           <li>
             Open the desk. The fictional exports and their field mappings are already loaded. Choose <strong
-              >Reload fictional example</strong
-            > to start over, or <strong>Try a fictional order handoff</strong> after clearing the example.
+              >Reload example</strong
+            > to start over, or <strong>Try an example</strong> after clearing the example.
           </li>
           <li>
             Select a finding. Read the baseline and candidate rows instead of guessing which version
@@ -185,114 +187,3 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
     </main>
   </body>
 </html>
-<style>
-  .tour {
-    max-width: 880px;
-    margin: auto;
-    padding: 20px clamp(16px, 4vw, 40px) 64px;
-  }
-  .tour section {
-    padding: 34px 0;
-    border-bottom: 1px solid #c6c1b6;
-  }
-  .tour-intro {
-    padding-top: 52px !important;
-  }
-  h1 {
-    max-width: 680px;
-    font-size: clamp(2rem, 5vw, 3.4rem);
-    line-height: 1.1;
-  }
-  h2 {
-    font-size: clamp(1.35rem, 3vw, 1.8rem);
-  }
-  p,
-  li,
-  blockquote {
-    line-height: 1.7;
-    color: #46564e;
-  }
-  li + li {
-    margin-top: 12px;
-  }
-  ol {
-    padding-left: 24px;
-  }
-  .lede {
-    font-size: 1.14rem;
-  }
-  .tour-action {
-    display: inline-block;
-    padding: 12px 18px;
-    background: #163c35;
-    color: #f8f5ee;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: 6px;
-  }
-  .flow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 22px 0;
-  }
-  .flow span {
-    padding: 9px 12px;
-    border: 1px solid #c6c1b6;
-    background: #f8f5ee;
-    font-size: 0.88rem;
-  }
-  details {
-    padding: 16px 0;
-  }
-  summary {
-    cursor: pointer;
-    font-weight: 700;
-    line-height: 1.5;
-  }
-  summary:focus-visible,
-  .table-scroll:focus-visible {
-    outline: 3px solid #d6723e;
-    outline-offset: 3px;
-  }
-  .table-scroll {
-    overflow-x: auto;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.86rem;
-  }
-  th,
-  td {
-    padding: 12px;
-    border-bottom: 1px solid #c6c1b6;
-    text-align: left;
-    vertical-align: top;
-    line-height: 1.5;
-  }
-  thead {
-    background: #e7e7da;
-  }
-  tbody th {
-    font-weight: 500;
-  }
-  .note {
-    font-size: 0.85rem;
-  }
-  blockquote {
-    margin: 24px 0;
-    padding: 12px 20px;
-    border-left: 3px solid #38685b;
-    background: #f8f5ee;
-  }
-  @media (max-width: 480px) {
-    th,
-    td {
-      padding: 8px;
-    }
-    .tour-intro {
-      padding-top: 32px !important;
-    }
-  }
-</style>

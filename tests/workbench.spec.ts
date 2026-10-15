@@ -210,7 +210,13 @@ test('puts a readable findings row in the opening viewport on desktop and phone'
     await expect(firstFinding).toBeVisible();
     const box = await firstFinding.boundingBox();
     expect(box?.y).toBeLessThan(maximumTop);
-    await expect(firstFinding.locator('strong')).toHaveCSS('color', 'rgb(23, 34, 31)');
+    expect(
+      await firstFinding
+        .locator('strong')
+        .evaluate((element) =>
+          Number.parseFloat(document.defaultView!.getComputedStyle(element).fontSize),
+        ),
+    ).toBeGreaterThanOrEqual(13);
     await context.close();
   }
 });
@@ -323,9 +329,7 @@ test('reconciles two exports, records a revision-bound review, and exports local
 }) => {
   await page.goto('./');
   await page.locator('astro-island:not([ssr])').waitFor();
-  await expect(
-    page.getByRole('heading', { name: 'Find what changed between two exports.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find what changed.' })).toBeVisible();
   await expect(page.getByText('Baseline data records')).toBeVisible();
   await page.getByRole('button', { name: 'Changed', exact: true }).click();
   await page.getByText('00009', { exact: true }).click();

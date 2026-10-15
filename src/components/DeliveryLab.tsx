@@ -174,19 +174,12 @@ export default function DeliveryLab() {
   };
   return (
     <main className="workbench-shell">
-      <header className="masthead">
-        <a className="wordmark" href="./" aria-label="Field Relay workbench home">
-          <span>F</span>IELD RELAY
-        </a>
+      <header className="lab-context">
         <div className="masthead-copy">
           <p className="eyebrow">LOCAL SIMULATION / SESSION ONLY</p>
           <p>Partner CSV review desk</p>
         </div>
         <nav aria-label="Workbench links">
-          <a href="case-study/">Case study</a>
-          <a href="https://github.com/mastodonsharkgirl/field-relay" rel="noreferrer">
-            Source
-          </a>
           <button className="text-button" onClick={reset}>
             Reset session
           </button>
@@ -467,7 +460,7 @@ export default function DeliveryLab() {
                   ))}
                 </div>
                 <div className="queue-layout">
-                  <div className="queue-table" role="list" aria-label="Decision queue">
+                  <div className="queue-table" role="region" aria-label="Decision queue">
                     {(filter === 'held' || filter === 'duplicates' ? [] : visible).map((record) => (
                       <button
                         className={selected === record.key ? 'queue-row selected-row' : 'queue-row'}

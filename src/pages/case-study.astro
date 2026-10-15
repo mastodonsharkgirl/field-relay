@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
-const base = import.meta.env.BASE_URL;
+import Brand from '../components/Brand';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
 
 <!doctype html>
@@ -9,33 +10,15 @@ const base = import.meta.env.BASE_URL;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>Field Relay — reconciliation case study</title>
-    <style>
-      .case-study {
-        max-width: 820px;
-        margin: 0 auto;
-        padding: clamp(32px, 8vw, 96px) 24px;
-      }
-      .case-study h1 {
-        margin-bottom: 20px;
-      }
-      .case-study h2 {
-        margin-top: 42px;
-      }
-      .case-study p {
-        max-width: 670px;
-        color: #46564e;
-        line-height: 1.7;
-      }
-      .case-study .lede {
-        font-size: 1.05rem;
-      }
-      .case-study a {
-        font-weight: 700;
-      }
-    </style>
+    <link rel="icon" href={base + 'favicon.svg'} type="image/svg+xml" />
   </head>
   <body>
     <main class="case-study">
+      <header class="masthead">
+        <Brand href={base} /><nav aria-label="Case study navigation">
+          <a href={base + 'walkthrough/'}>Interview walkthrough</a><a href={base}>Open the desk</a>
+        </nav>
+      </header>
       <p class="eyebrow">FIELD RELAY / CASE STUDY</p>
       <h1>A review desk for the difference between two exports.</h1>
       <p class="lede">

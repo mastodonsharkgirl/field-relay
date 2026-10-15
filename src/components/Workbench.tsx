@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DeliveryLab from './DeliveryLab';
+import Brand from './Brand';
 import { demoBaseline, demoCandidate, demoMapping } from '../lib/comparison-fixture';
 import {
   canAcceptCandidate,
@@ -305,39 +306,34 @@ function ReconciliationDesk() {
   }, [exportPrompt]);
   return (
     <main className="workbench-shell reconciliation-shell">
-      <header className="masthead">
-        <a className="wordmark" href="./" aria-label="Field Relay reconciliation home">
-          <span>F</span>IELD RELAY
-        </a>
-        <div className="masthead-copy">
-          <p className="eyebrow">LOCAL REVIEW / THIS TAB ONLY</p>
-          <p>Compare two exports before a handoff.</p>
-        </div>
-        <nav aria-label="Field Relay areas">
-          <a href="walkthrough/">Interview walkthrough</a>
-          <a href="case-study/">Case study</a>
-          <a href="https://github.com/mastodonsharkgirl/field-relay" rel="noreferrer">
-            Source
-          </a>
-        </nav>
-      </header>
       <section className="compare-intro">
         <div>
-          <p className="eyebrow">RECONCILIATION WORKSPACE</p>
-          <h1>Find what changed between two exports.</h1>
+          <p className="eyebrow">
+            <span className="status-dot" /> RECONCILIATION WORKSPACE
+          </p>
+          <h1>Find what changed.</h1>
           <p className="lede">
             Match IDs, inspect changed or missing rows, then download the original evidence.
           </p>
           <div className="intro-actions">
-            <button onClick={loadExample}>
-              {fictionalExample ? 'Reload fictional example' : 'Try a fictional order handoff'}
+            <button
+              onClick={loadExample}
+              aria-label={
+                fictionalExample ? 'Reload fictional example' : 'Try a fictional order handoff'
+              }
+            >
+              {fictionalExample ? 'Reload example' : 'Try an example'}
             </button>
             <button className="secondary" onClick={loadOwnFiles}>
               Use your files
             </button>
             {!setupOpen && (
-              <button className="text-button" onClick={() => setSetupOpen(true)}>
-                Change inputs and mapping
+              <button
+                className="text-button"
+                aria-label="Change inputs and mapping"
+                onClick={() => setSetupOpen(true)}
+              >
+                Inputs &amp; mapping
               </button>
             )}
           </div>
@@ -345,6 +341,36 @@ function ReconciliationDesk() {
             <strong>Local only.</strong>{' '}
             <span>Save a report before closing; nothing is updated downstream.</span>
           </p>
+        </div>
+        <div className="comparison-visual" aria-label="Current comparison inputs">
+          <div className="document-pair">
+            <div className="document-tile">
+              <span className="document-letter">A</span>
+              <strong>Baseline</strong>
+              <span className="document-name">{baselineFileName || 'Pasted input'}</span>
+              <i />
+              <i />
+              <i />
+            </div>
+            <svg className="document-connector" viewBox="0 0 60 44" fill="none" aria-hidden="true">
+              <path
+                d="M4 15h46m-8-7 8 7-8 7M56 31H10m8-7-8 7 8 7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="document-tile candidate-tile">
+              <span className="document-letter">B</span>
+              <strong>Candidate</strong>
+              <span className="document-name">{candidateFileName || 'Pasted input'}</span>
+              <i />
+              <i />
+              <i />
+            </div>
+          </div>
+          <p>Two exports. One reviewable handoff.</p>
         </div>
       </section>
       {setupOpen && (
@@ -542,25 +568,16 @@ function ReconciliationDesk() {
           <section className="panel findings-panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">REVIEW FINDINGS</p>
-                <h2>Every result retains its original rows.</h2>
+                <h2>Review the differences.</h2>
                 <p className="source-state result-state">
                   {fictionalExample
                     ? 'Fictional example data loaded'
                     : 'Local CSV or pasted data loaded'}
                 </p>
               </div>
-              <div className="export-actions">
-                <button onClick={(event) => requestExport('csv', event.currentTarget)}>
-                  Download findings CSV
-                </button>
-                <button
-                  className="secondary"
-                  onClick={(event) => requestExport('json', event.currentTarget)}
-                >
-                  Download review pack
-                </button>
-              </div>
+              <a className="download-jump" href="#report-downloads">
+                Downloads <span aria-hidden="true">↓</span>
+              </a>
             </div>
             <dialog
               className="export-review-dialog"
@@ -626,10 +643,7 @@ function ReconciliationDesk() {
                 </div>
               )}
             </dialog>
-            <p className="plain-help">
-              {report.stats.unchanged} unchanged one-to-one IDs are excluded from this review list.
-              Duplicate and blank-ID rows remain findings and cannot be accepted as replacements.
-            </p>
+
             <div className="finding-controls">
               <div className="filter-bar">
                 {statuses.map((status) => (
@@ -666,13 +680,12 @@ function ReconciliationDesk() {
                 />
               </label>
             </div>
-            <p className="plain-help" aria-live="polite">
-              {visible.length} matching finding{visible.length === 1 ? '' : 's'}; showing the first{' '}
-              {Math.min(visible.length, visibleLimit)}. Downloads include every finding, not only
-              this list.
+            <p className="plain-help findings-count" aria-live="polite">
+              {visible.length} matching finding{visible.length === 1 ? '' : 's'} · showing{' '}
+              {Math.min(visible.length, visibleLimit)}. Downloads include every finding.
             </p>
             <div className={mobileDetail ? 'reconcile-layout mobile-detail' : 'reconcile-layout'}>
-              <div className="finding-list" role="list" aria-label="Reconciliation findings">
+              <div className="finding-list" role="region" aria-label="Reconciliation findings">
                 <h3
                   ref={(element) => {
                     findingsHeadingRef.current = element;
@@ -828,6 +841,42 @@ function ReconciliationDesk() {
                   </>
                 ) : (
                   <>
+                    <svg
+                      className="inspection-illustration"
+                      viewBox="0 0 100 88"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="12"
+                        y="14"
+                        width="48"
+                        height="58"
+                        rx="8"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M24 30h24M24 40h16M24 50h10"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                      <circle
+                        cx="64"
+                        cy="52"
+                        r="18"
+                        fill="var(--surface)"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="m77 65 12 12M57 52h14M64 45v14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
                     <p className="eyebrow">INSPECTION</p>
                     <h3>Select a finding.</h3>
                     <p>
@@ -838,6 +887,25 @@ function ReconciliationDesk() {
                 )}
               </aside>
             </div>
+            <div className="export-actions report-downloads" id="report-downloads">
+              <button onClick={(event) => requestExport('csv', event.currentTarget)}>
+                Download findings CSV
+              </button>
+              <button
+                className="secondary"
+                onClick={(event) => requestExport('json', event.currentTarget)}
+              >
+                Download review pack
+              </button>
+            </div>
+            <details className="counting-notes">
+              <summary>How these findings are counted</summary>
+              <p className="plain-help findings-explanation">
+                {report.stats.unchanged} unchanged one-to-one IDs are excluded from this review
+                list. Duplicate and blank-ID rows remain findings and cannot be accepted as
+                replacements.
+              </p>
+            </details>
           </section>
         </>
       )}
@@ -857,14 +925,26 @@ export default function Workbench() {
   };
   return (
     <>
-      <nav className="mode-switch" aria-label="Field Relay mode">
-        <button aria-pressed={view === 'compare'} onClick={() => changeView('compare')}>
-          Reconcile exports
-        </button>
-        <button aria-pressed={view === 'lab'} onClick={() => changeView('lab')}>
-          Delivery simulator lab
-        </button>
-      </nav>
+      <header className="app-topbar">
+        <Brand />
+        <nav className="mode-switch" aria-label="Field Relay mode">
+          <button aria-pressed={view === 'compare'} onClick={() => changeView('compare')}>
+            Reconcile exports
+          </button>
+          <button aria-pressed={view === 'lab'} onClick={() => changeView('lab')}>
+            Delivery simulator lab
+          </button>
+        </nav>
+        <nav className="app-links" aria-label="Field Relay areas">
+          <a href="walkthrough/">
+            Interview walkthrough <span aria-hidden="true">↗</span>
+          </a>
+          <a href="case-study/">Case study</a>
+          <a href="https://github.com/mastodonsharkgirl/field-relay" rel="noreferrer">
+            Source
+          </a>
+        </nav>
+      </header>
       <div
         ref={(element) => {
           comparisonPanel.current = element;

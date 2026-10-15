@@ -16,8 +16,14 @@ Exports are explicit downloads: a formula-safe CSV findings report and a JSON re
 
 The separate Delivery simulator lab retains the earlier fictional partner-order exercise: parse, map, quarantine, approve, inject an outage, retry, and inspect a replay-safe local ledger. It does not consume reconciliation results or perform delivery.
 
-## Interface direction
+## Interface direction — 15 October 2026 redesign
 
-The published [interview walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/) uses the same paper/ink direction and links to the working desk. It explains the hypothetical supply-chain problem and recorded HTTP experiment with real source-labelled evidence. Publication and repaired-source verification are in [the current release](integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md).
+The user requested a substantial redesign informed by their Model Signal prompts and all four Saran skills. The intended audience is a person reviewing an export handoff or walking an interviewer through the prototype. The primary task remains finding a difference, inspecting its source rows, recording a reason, then downloading the evidence.
 
-The primary desk leads with “Find what changed between two exports.” It keeps actual results, exact source evidence, clear limits, and a restrained paper/ink surface visible from phone to desktop. The simulator stays clearly labelled as a separate local lab.
+The direction is an editorial navy-and-ivory workspace with a quiet lavender gradient, an owned relay mark, locally served Geist typography, modest radii, thin dividers and raised button feedback. This supersedes the earlier paper/green/serif presentation. The Model Signal reference supplies hierarchy, depth and craftsmanship; its model rankings, logos, data pipeline and appearance controls are not Field Relay features.
+
+The desk leads with “Find what changed.” Its five summary values derive from the actual comparison. The two document shapes identify the current input names; their decorative lines are not data. Keep the findings area dominant, with a distinct evidence inspector on desktop and the existing focused detail/back flow on phones. Native phone filters and full-width reflow preserve usability at 320px and enlarged text. Source counting details remain available in a labelled disclosure. Keep readable numbers and text rather than forcing all content into a short viewport through tiny labels.
+
+Motion uses finite 240–360ms entrances and 140–180ms control feedback with the same decelerating easing. Data values never count up or animate their order. There are no ambient loops, new graphics dependencies or hidden model calls. Reduced motion disables entrances, transitions and hover/press movement while preserving final states.
+
+The [interview walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/) and case study use the same brand and an editorial numbered reading order. They retain the hypothetical coordinator, AI coding assistance, recorded local experiment and proposed-only Claude extension. The simulator stays explicitly separate and fictional. Backend repair evidence remains in [the earlier release record](integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md); it is not proof of this redesign's verification.
