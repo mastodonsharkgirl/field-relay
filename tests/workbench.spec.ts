@@ -279,11 +279,11 @@ test('keeps crafted collision findings, browser decisions, and downloaded report
   await page.getByLabel('Baseline comparison column 1').selectOption('value');
   await page.getByLabel('Candidate comparison column 1').selectOption('value');
   await page.getByText('A2c7j', { exact: true }).click();
-  await page.getByLabel('Reviewer disposition').selectOption('hold');
+  await page.getByLabel('Your decision').selectOption('hold');
   await page.getByLabel('Reason or next step').fill('A only');
   await page.getByRole('button', { name: 'Save review' }).click();
   await page.getByText('B11x7', { exact: true }).click();
-  await page.getByLabel('Reviewer disposition').selectOption('ignore');
+  await page.getByLabel('Your decision').selectOption('ignore');
   await page.getByLabel('Reason or next step').fill('B only');
   await page.getByRole('button', { name: 'Save review' }).click();
   await expect(page.getByText('held — reviewed')).toHaveCount(1);
@@ -334,10 +334,10 @@ test('reconciles two exports, records a revision-bound review, and exports local
   await page.getByRole('button', { name: 'Changed', exact: true }).click();
   await page.getByText('00009', { exact: true }).click();
   await expect(page.getByText('SIDE-BY-SIDE EVIDENCE')).toBeVisible();
-  await page.getByLabel('Reviewer disposition').selectOption('accept-candidate');
+  await page.getByLabel('Your decision').selectOption('accept-candidate');
   await page.getByLabel('Reason or next step').fill('Confirmed against the candidate handoff.');
   await page.getByRole('button', { name: 'Save review' }).click();
-  await expect(page.getByText('Saved for this exact comparison revision.')).toBeVisible();
+  await expect(page.getByText('Review saved for these files and settings.')).toBeVisible();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download review pack' }).click();
   await expect(download).resolves.toBeTruthy();
@@ -353,7 +353,7 @@ test('requires an explicit choice before exporting an unsaved review and disable
   await page.locator('astro-island:not([ssr])').waitFor();
   await page.getByRole('button', { name: 'Changed', exact: true }).click();
   await page.getByText('00009', { exact: true }).click();
-  await page.getByLabel('Reviewer disposition').selectOption('accept-candidate');
+  await page.getByLabel('Your decision').selectOption('accept-candidate');
   await page.getByLabel('Reason or next step').fill('Prepared but not saved.');
   await page.getByRole('button', { name: 'Download review pack' }).click();
   const prompt = page.getByRole('dialog', { name: 'Unsaved review before download' });
@@ -371,7 +371,7 @@ test('requires an explicit choice before exporting an unsaved review and disable
   await page.getByRole('button', { name: 'Missing from candidate', exact: true }).click();
   await page.getByText('00005', { exact: true }).click();
   await expect(
-    page.getByLabel('Reviewer disposition').locator('option[value="accept-candidate"]'),
+    page.getByLabel('Your decision').locator('option[value="accept-candidate"]'),
   ).toHaveAttribute('disabled', '');
 });
 
@@ -421,7 +421,7 @@ test('saves a duplicate-ID hold as reviewed but keeps it unresolved', async ({ p
   await page.locator('astro-island:not([ssr])').waitFor();
   await page.getByRole('button', { name: 'Duplicate IDs', exact: true }).click();
   await page.getByText('00017', { exact: true }).click();
-  await page.getByLabel('Reviewer disposition').selectOption('hold');
+  await page.getByLabel('Your decision').selectOption('hold');
   await page.getByLabel('Reason or next step').fill('Ask the source owner which row is current.');
   await page.getByRole('button', { name: 'Save review' }).click();
   await expect(page.getByText('Hold saved. This item remains unresolved.')).toBeVisible();

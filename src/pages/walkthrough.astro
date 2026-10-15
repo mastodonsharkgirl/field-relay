@@ -5,10 +5,10 @@ import record from '../../docs/evidence/2026-10-15-mock-http/audited/walkthrough
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const labels: Record<string, string> = {
   'response-loss': 'Supplier saves the order, confirmation is lost',
-  'repeat-dispatch-after-both-process-restarts': 'Restart and repeat the verified order',
+  'repeat-dispatch-after-both-process-restarts': 'Restart and send the same order again',
   'changed-payload-held': 'Change the amount under the same order ID',
-  'revoked-during-429-wait': 'Revoke approval while waiting to retry',
-  'revoked-after-admission-may-commit': 'Revoke after the send has been admitted',
+  'revoked-during-429-wait': 'Withdraw approval before the next try',
+  'revoked-after-admission-may-commit': 'Withdraw approval after sending starts',
 };
 if (record.status !== 'passed' || record.vendorReadback.verification !== 'verified')
   throw Error('The walkthrough requires an actual verified local report.');
@@ -25,7 +25,7 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
     <link rel="icon" href={base + 'favicon.svg'} type="image/svg+xml" />
     <meta
       name="description"
-      content="A five-minute walkthrough of CSV reconciliation and a recorded local experiment in uncertain order delivery."
+      content="Compare two order sheets, then see how the demo handles a lost reply."
     />
   </head>
   <body>
@@ -38,90 +38,87 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
         </nav>
       </header>
       <section class="tour-intro">
-        <p class="eyebrow">INTERVIEW WALKTHROUGH / FICTIONAL ORDERS</p>
+        <p class="eyebrow">A QUICK TOUR / SAMPLE DATA</p>
         <h1>Walk through Field Relay in five minutes.</h1>
         <p class="lede">
-          Find a difference. Inspect the original rows. Then explain what happens when an order is
-          saved but its confirmation never arrives.
+          Compare two order sheets and review what changed. Then see what happens when a supplier
+          saves an order but the reply never comes back.
         </p>
         <p>
-          This is an AI-assisted portfolio prototype. The supply-chain coordinator below is
-          hypothetical. The website works with files in your browser; the separate HTTP experiment
-          was run locally.
+          I built this demo with AI coding help. The story and orders are made up. You can try the
+          spreadsheet tools here; the separate server test was run on a computer.
         </p>
-        <a class="tour-action" href={base}>Open the reconciliation desk</a>
+        <a class="tour-action" href={base}>Compare the sheets</a>
       </section>
       <section aria-labelledby="compare">
-        <p class="eyebrow">01 / TRY THE WORKING DESK</p>
-        <h2 id="compare">What changed between these exports?</h2>
+        <p class="eyebrow">01 / COMPARE TWO SHEETS</p>
+        <h2 id="compare">What changed in the order sheet?</h2>
         <p>
-          Imagine a coordinator comparing a supplier export with the team’s sheet before a handoff.
-          Some values have changed. An order is missing. An ID appears twice.
+          Imagine you handle orders for a supply-chain company. A supplier sends a new sheet, and
+          you need to check it against yours. Did a quantity change? Is an order missing? Did
+          someone use the same ID twice?
         </p>
         <ol>
           <li>
-            Open the desk. The fictional exports and their field mappings are already loaded. Choose <strong
-              >Reload example</strong
-            > to start over, or <strong>Try an example</strong> after clearing the example.
+            The sample files are ready to use. Click <strong>Reload example</strong> to start over, or
+            <strong>Try an example</strong> after clearing the example.
           </li>
           <li>
-            Select a finding. Read the baseline and candidate rows instead of guessing which version
-            is right.
+            Click Changed, then order 00009. Its quantity went from 5 to 9. You can see the original
+            row from each file.
           </li>
           <li>
-            Record a review decision with a reason. Duplicate and blank IDs remain ambiguous.
-            Download the evidence before closing the tab.
+            Choose a decision, add a reason, and save your review. Missing or repeated IDs need a
+            closer look. Download your report before closing the tab.
           </li>
         </ol>
         <p class="note">
-          “Local” means these files stay in the current browser tab. Reviewing a difference does not
-          send an order or update another system.
+          Your files stay in this browser tab. Closing it clears your work. Saving a review does not
+          send an order or change either source file.
         </p>
       </section>
       <section aria-labelledby="delivery">
-        <p class="eyebrow">02 / EXPLAIN UNCERTAIN DELIVERY</p>
-        <h2 id="delivery">A timeout does not tell you whether the order was saved.</h2>
+        <p class="eyebrow">02 / WHEN A REPLY GOES MISSING</p>
+        <h2 id="delivery">Did the supplier get the order?</h2>
         <p>
-          The coordinator submits an approved order. The supplier saves it, but the reply is lost.
-          Sending a new order could create a duplicate. Assuming nothing happened could hide
-          accepted work.
+          You send an order and get no reply. The supplier may still have saved it. Sending it again
+          could create a second order, so the demo first checks what the supplier has on file.
         </p>
         <div class="flow" aria-label="Order recovery sequence">
-          <span>Approve exact fields</span><span>Send with a stable reference</span><span
+          <span>Approve the order</span><span>Send with the same order key</span><span
             >Reply is lost</span
-          ><span>Read the supplier’s saved order</span><span>Verify the exact receipt</span>
+          ><span>Check the saved order</span><span>Match the details</span>
         </div>
         <p>
-          The local relay preserves decisions through restarts, limits retries and holds conflicting
-          evidence for investigation. Approval before a send and revocation after a send are
-          different events: an already admitted request can still commit.
+          The server demo remembers the approved order after a restart and limits how often it tries
+          again. If the details do not match, it stops for review. Withdrawing approval stops future
+          sends, but a request already being sent may still reach the supplier.
         </p>
         <details>
-          <summary>What can I actually operate in this website?</summary>
+          <summary>Which parts can I try here?</summary>
           <p>
-            The reconciliation desk and the <strong>Delivery simulator lab</strong> run in the browser.
-            The simulator is a separate fictional exercise with outage, retry and replay controls. It
-            consumes no reconciliation result. The Python/SQLite HTTP experiment shown below is recorded
-            evidence, not a remotely connected backend.
+            The file comparison and the <strong>Delivery simulator lab</strong> run in the browser. The
+            simulator uses its own sample orders; it does not use your comparison results. The table below
+            shows saved results from a separate server test. This website is not connected to a supplier.
           </p>
         </details>
       </section>
       <section aria-labelledby="proof">
-        <p class="eyebrow">03 / CHECK THE EVIDENCE</p>
-        <h2 id="proof">Recorded local HTTP experiment</h2>
+        <p class="eyebrow">03 / WHAT I TESTED</p>
+        <h2 id="proof">Saved results from the server test</h2>
         <p>
           <strong
-            >{record.scenarioResults.length} scenarios passed; {record.vendorReadback.count} exact supplier
-            orders verified.</strong
-          > These are measured results from fictional local fixtures, including injected failures. They
-          are not customer outcomes.
+            >{record.scenarioResults.length} tests passed; {record.vendorReadback.count} saved orders
+            checked.</strong
+          > These tests used made-up orders and a mock supplier. I caused failures on purpose to check
+          how the demo recovered.
         </p>
         <div class="table-scroll" tabindex="0" role="region" aria-label="Recorded scenario results">
           <table>
             <thead
               ><tr
                 ><th scope="col">Scenario</th><th scope="col">Result</th><th scope="col"
-                  >Verified orders for this scenario</th
+                  >Orders checked in this test</th
                 ></tr
               ></thead
             >
@@ -143,45 +140,42 @@ const source = 'https://github.com/mastodonsharkgirl/field-relay/tree/codex/fiel
         <p class="note">
           Recorded 15 October 2026. Source {record.metadata.sourceSha.slice(0, 7)}; clean source: {
             String(!record.metadata.dirty)
-          }. Scenario counts refer to separate checks and must not be added together as unique
-          orders.
+          }. Some tests check the same order, so the numbers in the table should not be added
+          together.
         </p>
         <p>
-          <a href={source + '/docs/evidence/2026-10-15-mock-http'}
-            >Inspect the reports and failed attempts</a
-          >. An earlier run stopped before admission and did not retain its exact cause. The repair
-          separates relay startup from the supplier wait and preserves safe failure codes.
-          Historical failures remain visible.
+          <a href={source + '/docs/evidence/2026-10-15-mock-http'}>Read the test reports</a>. The
+          reports include failed attempts. One earlier run stopped before sending an order, but did
+          not save enough detail to explain why. The demo now waits for its workers to be ready and
+          saves a short error code when something fails.
         </p>
       </section>
       <section aria-labelledby="explain">
-        <p class="eyebrow">04 / SAY IT IN YOUR OWN WORDS</p>
-        <h2 id="explain">The answer you should be able to defend.</h2>
+        <p class="eyebrow">04 / HOW TO EXPLAIN IT</p>
+        <h2 id="explain">A short explanation</h2>
         <blockquote>
-          “I built Field Relay with AI coding assistance to explore an operations problem: how do
-          you understand changes between exports, and recover when an order request times out? The
-          desk shows source rows. The separate local lab keeps the approved order fixed, uses one
-          stable identity, and checks what the supplier actually saved. I inject failures and
-          inspect the results. It is a learning prototype using fictional data.”
+          “I built Field Relay with AI coding help. It compares two order sheets and shows what
+          changed, with the original rows next to each other. I also built a separate demo for a
+          harder problem: what if a supplier saves an order but you never get the reply? It checks
+          what was saved before deciding whether to try again. I tested it with made-up orders.”
         </blockquote>
         <p>
-          Be ready to explain why a successful response is only a claim, why a changed amount needs
-          fresh approval, and why bounded retries can leave an unresolved exception. Describe your
-          own decisions and learning honestly.
+          Be ready to show one changed order, explain why retrying can create duplicates, and say
+          what still needs work. Talk about the choices you made and what you learned.
         </p>
         <details>
-          <summary>Where could Claude fit later?</summary>
+          <summary>Where would Claude help?</summary>
           <p>
-            A proposed extension could turn a messy supplier message into an order proposal.
-            Application code would validate it, a person would approve exact fields, and the
-            deterministic relay would handle delivery. A model should not infer permission or invent
-            a delivery status. No Claude call exists in this prototype.
+            Claude could read a supplier’s message and draft an order. The app would check the
+            fields, and a person would approve them before anything was sent. Claude would not
+            decide whether it had permission to send or whether delivery succeeded. This is an idea
+            for later; Claude is not connected to this demo.
           </p>
         </details>
         <p>
           <a href={source + '/docs/integration/INTERVIEW_GUIDE.md'}
             >Read the complete interview guide</a
-          > · <a href={base}>Return to the desk</a>
+          > · <a href={base}>Back to the comparison</a>
         </p>
       </section>
     </main>

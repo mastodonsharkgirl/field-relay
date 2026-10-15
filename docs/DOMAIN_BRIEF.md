@@ -27,3 +27,7 @@ The desk leads with “Find what changed.” Its five summary values derive from
 Motion uses finite 240–360ms entrances and 140–180ms control feedback with the same decelerating easing. Data values never count up or animate their order. There are no ambient loops, new graphics dependencies or hidden model calls. Reduced motion disables entrances, transitions and hover/press movement while preserving final states.
 
 The [interview walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/) and case study use the same brand and an editorial numbered reading order. They retain the hypothetical coordinator, AI coding assistance, recorded local experiment and proposed-only Claude extension. The simulator stays explicitly separate and fictional. Backend repair evidence remains in [the earlier release record](integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md); it is not proof of this redesign's verification.
+
+## Copy guidance
+
+Use plain, direct language. Say what the person does and what happens next. Prefer comparing files, checking rows and choosing a decision to abstract operations jargon. Preserve the made-up scenario, AI coding help, browser-only file handling and separate server-test limits.

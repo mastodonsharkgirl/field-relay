@@ -8,7 +8,7 @@ test('changing motion preference preserves the active review and stops movement'
   await expect(page.getByRole('region', { name: 'Reconciliation findings' })).toBeVisible();
   await page.getByRole('button', { name: 'Changed', exact: true }).click();
   await page.getByRole('button', { name: /Changed 00009/ }).click();
-  await page.getByLabel('Reviewer disposition').selectOption('hold');
+  await page.getByLabel('Your decision').selectOption('hold');
   await page.getByLabel('Reason or next step').fill('Check the original supplier message.');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect

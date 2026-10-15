@@ -309,11 +309,11 @@ function ReconciliationDesk() {
       <section className="compare-intro">
         <div>
           <p className="eyebrow">
-            <span className="status-dot" /> RECONCILIATION WORKSPACE
+            <span className="status-dot" /> COMPARE TWO FILES
           </p>
           <h1>Find what changed.</h1>
           <p className="lede">
-            Match IDs, inspect changed or missing rows, then download the original evidence.
+            Compare two CSV files and check which rows changed or went missing.
           </p>
           <div className="intro-actions">
             <button
@@ -339,7 +339,7 @@ function ReconciliationDesk() {
           </div>
           <p className="lifetime-note">
             <strong>Local only.</strong>{' '}
-            <span>Save a report before closing; nothing is updated downstream.</span>
+            <span>Save your report before closing this tab. Your source files stay unchanged.</span>
           </p>
         </div>
         <div className="comparison-visual" aria-label="Current comparison inputs">
@@ -370,7 +370,7 @@ function ReconciliationDesk() {
               <i />
             </div>
           </div>
-          <p>Two exports. One reviewable handoff.</p>
+          <p>See the differences between these files.</p>
         </div>
       </section>
       {setupOpen && (
@@ -425,8 +425,8 @@ function ReconciliationDesk() {
           <section className="panel mapping-panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">EXPLICIT MATCHING</p>
-                <h2>Map the same business record in both exports.</h2>
+                <p className="eyebrow">MATCH THE COLUMNS</p>
+                <h2>Choose which columns to compare.</h2>
               </div>
               <label className="toggle">
                 <input
@@ -782,10 +782,10 @@ function ReconciliationDesk() {
                       />
                     </div>
                     <fieldset>
-                      <legend>Reviewer disposition</legend>
+                      <legend>Your decision</legend>
                       <label>
                         <select
-                          aria-label="Reviewer disposition"
+                          aria-label="Your decision"
                           value={drafts[selectedItem.id]?.disposition ?? ''}
                           onChange={(event) =>
                             updateDraft(selectedItem.id, {
@@ -793,7 +793,7 @@ function ReconciliationDesk() {
                             })
                           }
                         >
-                          <option value="">Choose a disposition</option>
+                          <option value="">Choose a decision</option>
                           <option value="hold">Hold for follow-up</option>
                           <option
                             value="accept-candidate"
@@ -829,13 +829,13 @@ function ReconciliationDesk() {
                       <p className="inspection-note">
                         {decisions[selectedItem.id].disposition === 'hold'
                           ? 'Hold saved. This item remains unresolved.'
-                          : 'Saved for this exact comparison revision.'}
+                          : 'Review saved for these files and settings.'}
                       </p>
                     )}
                     {!canAcceptCandidate(selectedItem) && (
                       <p className="notice">
-                        Accept Candidate is available only for a one-to-one changed record. Hold or
-                        ignore can still document this finding.
+                        You can accept Candidate only when one row matches on each side and a value
+                        has changed. For this result, choose hold or ignore and explain why.
                       </p>
                     )}
                   </>
@@ -879,10 +879,7 @@ function ReconciliationDesk() {
                     </svg>
                     <p className="eyebrow">INSPECTION</p>
                     <h3>Select a finding.</h3>
-                    <p>
-                      Compare exact source rows and record a local disposition where a one-to-one
-                      match exists.
-                    </p>
+                    <p>Pick a row to see both versions and decide what needs checking.</p>
                   </>
                 )}
               </aside>

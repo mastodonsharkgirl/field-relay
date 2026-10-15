@@ -249,8 +249,8 @@ export default function DeliveryLab() {
                 Check a CSV handoff <em>before</em> it moves.
               </h1>
               <p className="lede">
-                Review the rows, decisions, and source cells in this browser before you run a local
-                delivery simulation. Nothing leaves this device.
+                Check the sample orders, approve the ones that need review, then try a delivery.
+                This is a simulation. Nothing is sent to a supplier.
               </p>
             </div>
             <RoutingSummary

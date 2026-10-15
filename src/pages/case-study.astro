@@ -16,48 +16,50 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     <main class="case-study">
       <header class="masthead">
         <Brand href={base} /><nav aria-label="Case study navigation">
-          <a href={base + 'walkthrough/'}>Interview walkthrough</a><a href={base}>Open the desk</a>
+          <a href={base + 'walkthrough/'}>Interview walkthrough</a><a href={base}>Compare files</a>
         </nav>
       </header>
       <p class="eyebrow">FIELD RELAY / CASE STUDY</p>
-      <h1>A review desk for the difference between two exports.</h1>
+      <h1>Spot the differences between two order sheets.</h1>
       <p class="lede">
-        Field Relay is a browser-local reconciliation desk for comparing a baseline export with a
-        candidate export before someone acts. It keeps exact input, original source rows, field
-        mapping, and local review decisions in an explicit download.
+        A supplier sends a new spreadsheet. Before you use it, you need to know what changed. Field
+        Relay compares it with your existing file and shows the rows that need a closer look.
       </p>
-      <h2>Comparison design</h2>
+      <h2>How it works</h2>
       <p>
-        Each export has its own explicit business-ID map and selected comparable fields. IDs remain
-        literal strings, so leading zeroes are preserved. One-to-one records can be unchanged or
-        changed; records only on one side stay visible. Duplicate or blank IDs stay ambiguous with
-        all row evidence and never receive an automatic replacement decision.
+        Load two CSV files, choose the ID column in each, and pick the columns you want to compare.
+        The app finds changed values, missing orders and repeated or blank IDs. It keeps IDs exactly
+        as written, so 0007 and 7 are treated as different IDs.
       </p>
-      <h2>Reviewable evidence</h2>
+      <h2>Check the original rows</h2>
       <p>
-        A reviewer can record an explicit hold, a proposal to use Candidate as current, or an
-        expected difference, with a reason. These decisions bind to the exact local input and
-        mapping revision. Editing either export, a map, a compared field, or whitespace
-        normalization clears them. The report includes full input text once in a shared comparison
-        reference, then maps review decisions to that reference with mappings, findings, and
-        unresolved items. Diagnostic fingerprints are labels only.
+        Open a result to see both source rows. You can hold it for follow-up, mark a difference as
+        expected, or suggest using the second file’s value when there is one clear match. Add a
+        reason and save the review. The app does not choose for you when an ID is missing or
+        repeated.
       </p>
-      <h2>Separate delivery lab</h2>
+      <h2>Keep a copy of your review</h2>
       <p>
-        The earlier fictional delivery exercise remains separate from reconciliation. It
-        demonstrates parsing, approval, outage retry, and a replay-safe ledger, but it does not
-        consume comparison results or update any downstream system.
+        Download a CSV list of the findings or a JSON review pack with the source files, comparison
+        settings and your decisions. Changing either file or the comparison settings clears your
+        reviews, because they may no longer apply.
       </p>
-      <h2>Operational boundary</h2>
+      <h2>Try a failed delivery</h2>
       <p>
-        The reconciliation desk reads pasted or browser-selected files only in the active tab and
-        never sends them to a server. Exports are explicit downloads. The included examples and
-        delivery lab are fictional; the comparison workflow works with a user’s own CSV exports.
+        The delivery simulator is a separate demo with made-up orders. You can cause an outage, try
+        again and check that repeating a delivered order does not create another one. It does not
+        use your comparison results or send anything to a real supplier.
+      </p>
+      <h2>Your files stay in the tab</h2>
+      <p>
+        Files you select or paste are processed in your browser. They are not uploaded. The sample
+        data is made up, but you can compare your own CSV files. Download your work before closing
+        the tab; it is not saved automatically.
       </p>
       <p>
-        <a href={base}>Open the reconciliation desk</a> · <a
-          href={base.replace(/\/?$/, '/') + 'walkthrough/'}>Interview walkthrough</a
-        > · <a href="https://github.com/mastodonsharkgirl/field-relay">Inspect the source</a>
+        <a href={base}>Compare two files</a> · <a href={base.replace(/\/?$/, '/') + 'walkthrough/'}
+          >Interview walkthrough</a
+        > · <a href="https://github.com/mastodonsharkgirl/field-relay">View the code</a>
       </p>
     </main>
   </body>
