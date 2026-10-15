@@ -95,6 +95,8 @@ class SqliteRelayStore implements RelayStore {
     if (!version || version.value !== SCHEMA_VERSION) {
       throw Error('relay database has an unknown schema version');
     }
+    const journal = this.#db.prepare('PRAGMA journal_mode').get() as Row | undefined;
+    if (journal?.journal_mode !== 'wal') throw Error('relay database must retain WAL mode');
   }
 
   #transaction<T>(work: () => T): T {

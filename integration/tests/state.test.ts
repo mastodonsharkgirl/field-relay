@@ -1180,3 +1180,23 @@ test('competing resumed workers keep multiple reservation and audit IDs strictly
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('resume refuses changed journal mode without rewriting it', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'field-relay-journal-'));
+  const path = join(directory, 'relay.sqlite');
+  try {
+    openRelayStore(path, 'new').close();
+    const changed = new DatabaseSync(path);
+    changed.exec('PRAGMA journal_mode = DELETE;');
+    changed.close();
+    assert.throws(() => openRelayStore(path, 'resume').close(), /WAL/);
+    const inspected = new DatabaseSync(path);
+    try {
+      assert.equal(inspected.prepare('PRAGMA journal_mode').get()?.journal_mode, 'delete');
+    } finally {
+      inspected.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
