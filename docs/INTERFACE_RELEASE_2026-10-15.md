@@ -45,3 +45,9 @@ The Python test deliberately waits for a slow response but used a two-second soc
 The original `abc1524` main run passed on its second attempt; the first failure remains recorded above. The final repaired-source run passed on its first attempt. [Final integration summary](evidence/2026-10-15-interface/final-integration-summary.json), [final demo summary](evidence/2026-10-15-interface/final-demo-summary.json), and [final build provenance](evidence/2026-10-15-interface/final-build-provenance.json) identify the current tested implementation.
 
 All 14 packaged file paths and hashes from this final build exactly equal the already-deployed `abc1524` artifact. The static preview therefore already serves the final source's exact website bytes; no redundant upload was needed. The local-lab repair is pushed on both main and the retained implementation branch. Documentation-only follow-ups are marked to skip CI because they change none of these verified implementation files.
+
+## Plain-language copy update
+
+Source `0b2d74d782ecfa6adc96b05a5f091c12bc7984cb` simplifies the walkthrough, case study and main review screen. It replaces abstract operations language with direct instructions, including “Compare the sheets”, “Did the supplier get the order?” and “Your decision”. Product behavior and the fictional-data, local-file and separate-test limits are unchanged.
+
+[Website QA](https://github.com/mastodonsharkgirl/field-relay/actions/runs/38723983320) passed type/lint/format, 15 unit tests, build and 22 browser tests. Local visual checks covered all three pages at 320/768/1440 px with no horizontal overflow. [Deployment 34094fd6](https://34094fd6.field-relay-saran.pages.dev/labs/field-relay/walkthrough/) uses the verified 14-file CI package. All three live HTML pages match the build; the live walkthrough link and renamed review control were exercised successfully.
