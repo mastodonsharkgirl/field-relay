@@ -4,7 +4,7 @@ Field Relay helps someone answer: **what changed between these two CSV exports?*
 
 The repository also contains two separate fictional learning exercises: the existing browser delivery simulator and an opt-in local HTTP lab. Browser files and approvals never enter the HTTP lab. No real supplier, customer account or model is connected.
 
-Published interview preview: [open Field Relay](https://field-relay-saran.pages.dev/labs/field-relay/) or [start the five-minute walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/). Refreshed interface and hardened demo-fixture source `abc1524` is pushed to `main`; its full hosted checks passed and the exact tested static bundle is deployed. [Latest release and evidence](docs/INTERFACE_RELEASE_2026-10-15.md). The older local checkpoint below remains historical.
+Published interview preview: [open Field Relay](https://field-relay-saran.pages.dev/labs/field-relay/) or [start the five-minute walkthrough](https://field-relay-saran.pages.dev/labs/field-relay/walkthrough/). Refreshed interface and hardened demo-fixture source `b9f11c5` is pushed to `main`; its full hosted checks passed and the exact tested static bundle is deployed. [Latest release and evidence](docs/INTERFACE_RELEASE_2026-10-15.md). The older local checkpoint below remains historical.
 
 ## Run
 

@@ -1,0 +1,38 @@
+[
+  {
+    "status": "passed",
+    "mode": "new",
+    "sourceSha": "b9f11c5d629045589916b3dec231ff012dd94690",
+    "dirty": false,
+    "elapsedMs": 5082,
+    "cleanupVerified": true,
+    "credentialScanPassed": true
+  },
+  {
+    "status": "passed",
+    "mode": "new",
+    "sourceSha": "b9f11c5d629045589916b3dec231ff012dd94690",
+    "dirty": false,
+    "elapsedMs": 5102,
+    "cleanupVerified": true,
+    "credentialScanPassed": true
+  },
+  {
+    "status": "passed",
+    "mode": "new",
+    "sourceSha": "b9f11c5d629045589916b3dec231ff012dd94690",
+    "dirty": false,
+    "elapsedMs": 5069,
+    "cleanupVerified": true,
+    "credentialScanPassed": true
+  },
+  {
+    "status": "passed",
+    "mode": "resume",
+    "sourceSha": "b9f11c5d629045589916b3dec231ff012dd94690",
+    "dirty": false,
+    "elapsedMs": 1808,
+    "cleanupVerified": true,
+    "credentialScanPassed": true
+  }
+]

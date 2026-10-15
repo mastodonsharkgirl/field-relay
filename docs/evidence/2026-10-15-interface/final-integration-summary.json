@@ -1,0 +1,42 @@
+{
+  "startedAt": "2026-10-15T10:34:37.008Z",
+  "finishedAt": "2026-10-15T10:36:40.760Z",
+  "commands": [
+    {
+      "executable": "C:\\hostedtoolcache\\windows\\node\\24.11.0\\x64\\node.exe",
+      "args": [
+        "--test",
+        "--test-concurrency=1",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\adversarial.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\cli.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\contract.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\lifecycle.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\milestone.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\retry.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\state.test.ts",
+        "D:\\a\\field-relay\\field-relay\\integration\\tests\\transport.test.ts"
+      ]
+    },
+    {
+      "executable": "C:\\hostedtoolcache\\windows\\Python\\3.14.8\\x64\\python.exe",
+      "args": ["-m", "unittest", "discover", "-s", "integration/tests", "-p", "test_*.py", "-v"]
+    }
+  ],
+  "node": {
+    "elapsedMs": 102748,
+    "exit": 0,
+    "tests": 102,
+    "passed": 102,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "python": {
+    "elapsedMs": 20942,
+    "exit": 0,
+    "tests": 28,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}
