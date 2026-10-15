@@ -46,11 +46,14 @@ class SqliteRelayStore implements RelayStore {
       throw Error('relay state does not exist; resume is refused');
     this.#db = new DatabaseSync(path, { enableForeignKeyConstraints: true });
     try {
-      this.#db.exec(
-        'PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 250;',
-      );
-      if (mode === 'new') this.#create();
-      else this.#verify();
+      this.#db.exec('PRAGMA busy_timeout = 250; PRAGMA foreign_keys = ON;');
+      if (mode === 'new') {
+        this.#db.exec('PRAGMA journal_mode = WAL;');
+        this.#create();
+      } else {
+        // WAL persists on disk; concurrent resumes must not renegotiate its mode.
+        this.#verify();
+      }
     } catch (error) {
       this.#db.close();
       throw error;
