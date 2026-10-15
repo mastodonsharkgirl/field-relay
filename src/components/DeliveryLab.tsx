@@ -227,6 +227,7 @@ export default function DeliveryLab() {
               key={id}
               className={stage === id ? 'stage active' : 'stage'}
               aria-current={stage === id ? 'step' : undefined}
+              aria-label={`${number} ${label}`}
               onClick={() => setStage(id)}
             >
               <span>{number}</span>
