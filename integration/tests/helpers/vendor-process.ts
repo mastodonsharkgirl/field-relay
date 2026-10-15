@@ -160,7 +160,8 @@ const waitForReady = (child: ChildProcess, tokens: string[]) =>
     child.stderr?.on('data', onStderr);
     child.once('exit', onExit);
     child.once('error', onError);
-    timeout = globalThis.setTimeout(() => fail('vendor child did not become ready'), 5_000);
+    // Test infrastructure can start slowly on shared runners; relay deadlines are unchanged.
+    timeout = globalThis.setTimeout(() => fail('vendor child did not become ready'), 15_000);
   });
 
 const waitForExit = (child: ChildProcess, timeoutMs: number) =>
@@ -245,7 +246,7 @@ export const startVendor = async (): Promise<VendorProcess> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
-        signal: globalThis.AbortSignal.timeout(2_000),
+        signal: globalThis.AbortSignal.timeout(10_000),
       },
     );
     const body = JSON.parse(await response.text()) as unknown;

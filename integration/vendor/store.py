@@ -182,7 +182,11 @@ class VendorStore:
             sequence = json.loads(row[f'{route}_sequence_json'])
             index = row[f'{route}_index']
             action = sequence[index] if index < len(sequence) else 'healthy'
-            next_index = index if action in ('401', '403', '422') else index + 1
+            # A response being consumed does not prove the client received it.
+            # Invalid absence must not silently become healthy after a timeout.
+            persistent = action in ('401', '403', '422') or (route == 'get' and action in (
+                'malformed_404', 'slow_404', 'invalid_404', 'mismatched_404'))
+            next_index = index if persistent else index + 1
             connection.execute(f'UPDATE scenarios SET {route}_index=?, {route}_request_count={route}_request_count+1 WHERE idempotency_key=?', (next_index, key))
             connection.commit()
             return action, index + 1

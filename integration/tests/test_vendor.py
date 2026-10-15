@@ -27,6 +27,23 @@ class VendorStoreTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_invalid_absence_fault_persists_until_explicit_reconfiguration(self):
+        from integration.vendor.store import VendorStore
+
+        store = VendorStore(self.path, 'new')
+        self.addCleanup(store.close)
+        key = identify(ORDER)['idempotencyKey']
+        for fault in ('malformed_404', 'slow_404', 'invalid_404', 'mismatched_404'):
+            with self.subTest(fault=fault):
+                store.configure_scenario(key, ['503'], [fault])
+                # Consuming a response does not prove the client received it.
+                for attempt in range(3):
+                    self.assertEqual(store.consume_scenario(key, 'get', f'missed-{attempt}')[0], fault)
+                self.assertEqual(store.observe_scenario(key)['requestCount']['get'], 3)
+                self.assertIsNone(store.get_order(key))
+                store.configure_scenario(key, [], ['healthy'])
+                self.assertEqual(store.consume_scenario(key, 'get', 'reconfigured')[0], 'healthy')
+
     def test_changed_payload_preserves_original_receipt(self):
         from integration.vendor.store import VendorStore
 

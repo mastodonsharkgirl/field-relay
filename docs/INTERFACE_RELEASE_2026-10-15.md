@@ -15,3 +15,9 @@ Astro check reported 20 files with zero errors, warnings or hints; lint and form
 ## Factual boundaries
 
 The coordinator story is hypothetical. CSV reconciliation and delivery simulation are browser-local. The Python/SQLite HTTP exercise is a separate local experiment with recorded evidence. No customer, supplier integration or Claude call is claimed. The historical unexplained failure remains preserved; the prior repair and its limits are in [the demo repair release](integration/DEMO_REPAIR_AND_PREVIEW_2026-10-15.md).
+
+## Hosted failures and targeted corrections
+
+The first UI run [38718289612](https://github.com/mastodonsharkgirl/field-relay/actions/runs/38718289612) failed one mobile browser test and four HTTP tests. The mobile stage number is visually hidden at narrow widths; a stable accessible name now preserves its step identity. The outage/retry/replay/download flow passed a focused mobile retest.
+
+The HTTP fixture consumed each invalid-absence response once, then silently returned healthy. If a busy runner timed out before seeing its headers, a later valid absence could legitimately authorize another POST, violating the test's intended setup. Invalid-absence GET faults now persist until explicit reconfiguration. A regression failed for all four faults before the change and passed after it; the four existing no-second-POST tests also passed unchanged. Only test-harness startup/admin waits increased (5 to 15 seconds and 2 to 10 seconds). The relay's 750 ms HTTP deadline, recovery limits, approval checks and retry budgets are unchanged. The original run also recorded startup/admin timeouts. This explains a reproducible fixture weakness; exact scheduling in that hosted run was not captured.
