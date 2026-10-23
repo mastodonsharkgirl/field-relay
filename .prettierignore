@@ -3,3 +3,6 @@ node_modules/
 .astro/
 test-results/
 package-lock.json
+
+# Preserve historical captured evidence byte-for-byte.
+docs/evidence/**
