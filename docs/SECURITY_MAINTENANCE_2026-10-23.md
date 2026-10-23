@@ -19,3 +19,14 @@ generator/server package closure is removed. Existing owned components remain.
 
 Publication and live readback are tracked in the central portfolio maintenance
 record; no hosted CI success is inferred from local results.
+
+## Browser policy follow-up
+
+The existing Pages packager now hashes the built inline scripts and styles and
+writes one global HTTP Content-Security-Policy header. Network connections,
+submissions, frames and workers are disabled; local CSV workflows and downloads
+remain available. Local preview enforces the generated policy as well. Builds
+with no HTML, nested headers, unsupported markup or an oversized policy fail.
+Full QA passed: 16 unit tests and all 23 browser tests, including unknown script
+and event-handler rejection. The standalone Pages artifact keeps its existing
+/labs/field-relay base and root redirect. Publication is recorded centrally.

@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: 'tests',
   testMatch: '**/*.spec.ts',
   webServer: {
-    command: 'npm run dev -- --port 4796 --force',
+    command: 'npm run preview -- --port 4796',
     port: 4796,
     reuseExistingServer: false,
   },

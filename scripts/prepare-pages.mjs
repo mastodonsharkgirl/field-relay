@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createPolicy } from './security-policy.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], {
@@ -15,10 +16,13 @@ if (!existsSync(join(dist, 'walkthrough', 'index.html')))
   throw Error('Build the interview walkthrough before packaging.');
 mkdirSync(join(artifact, 'labs'), { recursive: true });
 cpSync(dist, join(artifact, 'labs', 'field-relay'), { recursive: true });
+const policy = createPolicy(join(artifact, 'labs', 'field-relay'));
+if (existsSync(join(artifact, 'labs', 'field-relay', '_headers')))
+  throw Error('Nested headers forbidden');
 writeFileSync(join(artifact, '_redirects'), '/ /labs/field-relay/ 302\n');
 writeFileSync(
   join(artifact, '_headers'),
-  '/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Robots-Tag: noindex\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n',
+  `/*\n  Content-Security-Policy: ${policy}\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Robots-Tag: noindex\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n`,
 );
 const files = [];
 const inventory = (directory) => {
